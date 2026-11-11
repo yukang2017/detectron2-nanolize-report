@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Detectron2 Nanolize 报告</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column; figures and tables use the full column, numbers sit in a mono utility face. */
+:root{
+  --bg:#f3f5f8; --surface:#fbfcfd; --ink:#131820; --ink-2:#465061; --muted:#727c8c; --rule:#dde2ea;
+  --accent:#2a78d6; --accent-soft:#cde2fb;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --on-s4:#0b0b0b;
+  --good-ink:#006300; --crit-ink:#b3261e;
+  --font-display:"Space Grotesk","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-body:"IBM Plex Sans","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,"Noto Sans SC",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1115; --surface:#171a1f; --ink:#eceff3; --ink-2:#b8c0cc; --muted:#8a94a3; --rule:#2a3039;
+  --accent:#3987e5; --accent-soft:#17395f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --on-s4:#ffffff;
+  --good-ink:#35c035; --crit-ink:#f07a72; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0e1115; --surface:#171a1f; --ink:#eceff3; --ink-2:#b8c0cc; --muted:#8a94a3; --rule:#2a3039;
+  --accent:#3987e5; --accent-soft:#17395f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --on-s4:#ffffff;
+  --good-ink:#35c035; --crit-ink:#f07a72; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 72px}
+.page{max-width:920px;margin-inline:auto;display:grid;gap:56px}
+.page > *{min-width:0}
+header{display:grid;gap:20px}
+.eyebrow{font:500 12.5px/1.5 var(--font-mono);letter-spacing:.05em;color:var(--muted);margin:0}
+h1{font:600 clamp(28px,5vw,40px)/1.2 var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 22px/1.3 var(--font-display);margin:0;text-wrap:balance}
+h3{font:600 15.5px/1.45 var(--font-body);margin:0;text-wrap:balance}
+p{margin:0;max-width:44em}
+.lede{font-size:17px;color:var(--ink-2)}
+section{display:grid;gap:18px}
+section > *{min-width:0}
+ul,ol{margin:0;padding-left:1.35em;max-width:44em;display:grid;gap:8px}
+a{color:var(--accent)}
+code{font-family:var(--font-mono);font-size:.88em;background:color-mix(in srgb,var(--ink) 7%,transparent);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+nav{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
+nav a{text-decoration:none;border-bottom:1px solid var(--rule)}
+nav a:hover{border-bottom-color:var(--accent)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14px;margin:0;max-width:44em}
+.facts dt{color:var(--muted);white-space:nowrap}
+.facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;display:grid;gap:4px;align-content:start}
+.kpi .k{font-size:13px;color:var(--muted)}
+.kpi .v{font:600 28px/1.2 var(--font-display);letter-spacing:-.01em}
+.kpi .s{font-size:13px;color:var(--ink-2);line-height:1.5}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 13px/1.2 var(--font-body);padding:6px 10px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);white-space:nowrap;color:var(--ink)}
+.pill i{font-style:normal;font-weight:700}
+.pill.ok i{color:var(--good-ink)} .pill.bad i{color:var(--crit-ink)} .pill.na{color:var(--muted)}
+td .pill{padding:3px 8px;font-size:12.5px}
+.fig{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:20px;display:grid;gap:16px}
+.fig > *{min-width:0}
+figcaption{font-size:13.5px;color:var(--ink-2);line-height:1.6;max-width:46em}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--ink-2);max-width:none}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.s1{background:var(--s1)} .s2{background:var(--s2)} .s3{background:var(--s3)} .s4{background:var(--s4)}
+.bars{display:grid;gap:10px}
+.bar-row{display:grid;grid-template-columns:minmax(0,17em) minmax(0,1fr);gap:4px 14px;align-items:center;font-size:13.5px}
+.bar-name{color:var(--ink-2);line-height:1.45}
+.bar-track{display:flex;align-items:center;gap:8px;min-width:0}
+.bar{display:block;height:18px;min-width:2px;border-radius:0 4px 4px 0;background:var(--s1);flex:0 0 auto}
+.bar-val{font:500 13px var(--font-mono);color:var(--ink);white-space:nowrap}
+.stack{display:flex;gap:2px;height:22px;flex:0 0 auto}
+.seg{display:block;min-width:2px}
+.seg.end{border-radius:0 4px 4px 0}
+.segbar{display:flex;gap:2px;height:28px}
+.blk{border-radius:4px;display:flex;align-items:center;padding-left:8px;min-width:0;color:#fff;font:600 12px var(--font-mono)}
+.blk.s4{color:var(--on-s4)}
+.meters{display:grid;gap:11px}
+.meter-row{display:grid;grid-template-columns:minmax(0,15em) minmax(60px,1fr) auto;gap:6px 14px;align-items:center;font-size:13.5px}
+.meter-name{color:var(--ink-2);overflow-wrap:anywhere}
+.meter{height:8px;border-radius:999px;background:var(--accent-soft)}
+.meter i{display:block;height:100%;border-radius:999px;background:var(--s1)}
+.meter-fig{display:flex;gap:10px;justify-content:flex-end;font-family:var(--font-mono);font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.meter-fig b{color:var(--ink);font-weight:600;min-width:3.6em;text-align:right}
+.scroll-x{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.5}
+th,td{padding:8px 12px;border-bottom:1px solid var(--rule);text-align:right;vertical-align:top;font-variant-numeric:tabular-nums}
+thead th{font-weight:500;color:var(--muted);font-size:12.5px;white-space:nowrap;vertical-align:bottom}
+tbody th{text-align:left;font-weight:500}
+td{font-family:var(--font-mono);font-size:13px;white-space:nowrap}
+td.txt,th.txt{text-align:left;font-family:var(--font-body);font-size:14px;white-space:normal;min-width:11em}
+tr.total th,tr.total td{font-weight:600;border-top:1px solid var(--ink-2)}
+.diagram svg{display:block;width:100%;height:auto;min-width:760px;color:var(--ink);font-family:var(--font-body)}
+[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.45;padding:6px 9px;border-radius:6px;max-width:260px}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--rule);padding-top:20px}
+@media (max-width:640px){
+  .bar-row{grid-template-columns:minmax(0,1fr)}
+  .meter-row{grid-template-columns:minmax(0,1fr) auto}
+  .meter{grid-column:1 / -1;order:3}
+  .fig{padding:16px}
+}
+</style>
+</head>
+<body style="margin:0">
+
+
+<div class="page">
+
+<header>
+  <p class="eyebrow">NANOLIZE · AGENT-CONTROLLED REWRITE · 2026-11-10</p>
+  <h1>Detectron2 压缩报告</h1>
+  <p class="lede">用 nanolize 对 detectron2 做了一次保留全部 106 项功能的压缩。功能和安装验收全部通过,代码体积从 862,476 tokens 降到 663,124 tokens。减少的部分里 73% 是注释和文档字符串,真正的代码只少了 5.1%。交付物基本是去掉注释的原版,没有重新设计实现。</p>
+  <div class="kpis">
+    <div class="kpi"><span class="k">压缩后体积(占原版)</span><span class="v">76.89%</span><span class="s">862,476 → 663,124 tokens,缩小 23.11%</span></div>
+    <div class="kpi"><span class="k">总耗时</span><span class="v">11 小时 28 分</span><span class="s">7 次作者会话,11 次控制器决策,7 个候选</span></div>
+    <div class="kpi"><span class="k">模型费用</span><span class="v">$177.17</span><span class="s">每压掉 1,000 tokens 约 $0.89</span></div>
+    <div class="kpi"><span class="k">模型消耗</span><span class="v">1.76 亿 tokens</span><span class="s">输入,其中 98.0% 命中缓存;另有 178 万输出 tokens</span></div>
+  </div>
+  <div class="pills" aria-label="验收结果">
+    <span class="pill ok"><i aria-hidden="true">✓</i>CPU 行为检查 160 / 160</span>
+    <span class="pill ok"><i aria-hidden="true">✓</i>GPU 对比 360 项 0 回归</span>
+    <span class="pill ok"><i aria-hidden="true">✓</i>全新安装检查 4 / 4</span>
+    <span class="pill ok"><i aria-hidden="true">✓</i>覆盖审计通过</span>
+  </div>
+  <dl class="facts">
+    <dt>压缩对象</dt><dd>detectron2,提交 <code>247691a</code>,106 项功能全部保留</dd>
+    <dt>工具</dt><dd>nanolize 分支 <code>codex/controller-history-recovery</code>,引擎 agent-controller-v1</dd>
+    <dt>模型</dt><dd>控制器和作者都是 Claude Fable 5.2(1M 上下文)</dd>
+    <dt>作业</dt><dd><code>43a540d8</code>,2026-11-10 11:42 提交,23:11 完成(UTC)</dd>
+    <dt>结果分支</dt><dd><code>examples/detectron2-history-recovery-claude-20261110</code>(私有仓库)</dd>
+  </dl>
+  <nav aria-label="目录">
+    <a href="#tokens">压缩前后对比</a><a href="#content">压缩的内容</a><a href="#time">耗时</a><a href="#cost">tokens 与费用</a><a href="#process">压缩流程</a><a href="#run">本次运行经过</a><a href="#defect">检查之外的缺陷</a><a href="#gaps">已知缺口</a><a href="#method">测量口径</a>
+  </nav>
+</header>
+
+<section id="tokens">
+  <h2>压缩前后的 tokens</h2>
+  <p>体积只统计源码和配置文件,测试、文档和二进制资源不计入。压缩前后用同一个分词器、同一套分类规则测量。</p>
+  <figure class="fig">
+    <h3>源码加配置的 tokens,压缩前后</h3>
+    <ul class="legend"><li><i class="sw s1"></i>源码</li><li><i class="sw s2"></i>配置</li></ul>
+    <div class="bars">
+<div class="bar-row"><div class="bar-name">压缩前</div><div class="bar-track"><span class="stack" style="width:76.00%"><span class="seg s1" style="flex:808992 0 0" tabindex="0" data-tip="压缩前 · 源码:808,992 tokens"></span><span class="seg s2 end" style="flex:53484 0 0" tabindex="0" data-tip="压缩前 · 配置:53,484 tokens"></span></span><span class="bar-val">862,476</span></div></div>
+<div class="bar-row"><div class="bar-name">压缩后</div><div class="bar-track"><span class="stack" style="width:58.43%"><span class="seg s1" style="flex:633026 0 0" tabindex="0" data-tip="压缩后 · 源码:633,026 tokens"></span><span class="seg s2 end" style="flex:30098 0 0" tabindex="0" data-tip="压缩后 · 配置:30,098 tokens"></span></span><span class="bar-val">663,124</span></div></div>
+    </div>
+    <figcaption>压缩后是压缩前的 76.89%。作业设有 50%(431,238 tokens)的参考目标,但契约写明它不强制,也不允许为它牺牲功能;这个目标没有达到。</figcaption>
+  </figure>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">项目</th><th>压缩前</th><th>压缩后</th><th>变化</th></tr></thead>
+      <tbody><tr><th scope="row">源码 tokens</th><td>808,992</td><td>633,026</td><td>−175,966(−21.8%)</td></tr><tr><th scope="row">配置 tokens</th><td>53,484</td><td>30,098</td><td>−23,386(−43.7%)</td></tr><tr><th scope="row">合计 tokens</th><td>862,476</td><td>663,124</td><td>−199,352(−23.1%)</td></tr><tr><th scope="row">源码文件数</th><td>452</td><td>456</td><td>+4</td></tr><tr><th scope="row">配置文件数</th><td>206</td><td>187</td><td>−19</td></tr><tr><th scope="row">源码行数</th><td>72,035</td><td>56,703</td><td>−15,332(−21.3%)</td></tr><tr><th scope="row">配置行数</th><td>5,031</td><td>2,006</td><td>−3,025(−60.1%)</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<section id="content">
+  <h2>压缩掉的是什么</h2>
+  <p>一共减少 199,352 tokens。按内容拆开看,145,760 tokens 是注释和文档字符串,占 73%。</p>
+  <figure class="fig">
+    <h3>减少的 199,352 tokens 来自哪里</h3>
+    <div class="segbar" role="img" aria-label="减少量的构成:文档字符串、注释、配置文件、代码本身"><span class="blk s1" style="flex:103608 0 0" tabindex="0" data-tip="文档字符串:减少 103,608 tokens,占 52.0%"><b>52%</b></span><span class="blk s2" style="flex:42152 0 0" tabindex="0" data-tip="注释:减少 42,152 tokens,占 21.1%"><b>21%</b></span><span class="blk s3" style="flex:21483 0 0" tabindex="0" data-tip="配置文件:减少 21,483 tokens,占 10.8%"><b>11%</b></span><span class="blk s4" style="flex:32109 0 0" tabindex="0" data-tip="代码本身:减少 32,109 tokens,占 16.1%"><b>16%</b></span></div>
+    <ul class="legend"><li><i class="sw s1"></i>文档字符串</li><li><i class="sw s2"></i>注释</li><li><i class="sw s3"></i>配置文件</li><li><i class="sw s4"></i>代码本身</li></ul>
+    <figcaption>去掉注释和文档字符串以后,源码从 631,848 tokens 变成 599,739 tokens,只少了 5.1%。</figcaption>
+  </figure>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">类别</th><th>压缩前</th><th>压缩后</th><th>减少</th></tr></thead>
+      <tbody><tr><th scope="row">Python 文档字符串</th><td>119,559</td><td>15,951</td><td>−103,608</td></tr><tr><th scope="row">Python 注释</th><td>51,572</td><td>12,709</td><td>−38,863</td></tr><tr><th scope="row">C++ / CUDA 注释</th><td>6,013</td><td>4,627</td><td>−1,386</td></tr><tr><th scope="row">YAML 注释</th><td>1,903</td><td>0</td><td>−1,903</td></tr><tr><th scope="row">配置文件(不含注释)</th><td>51,581</td><td>30,098</td><td>−21,483</td></tr><tr><th scope="row">源码(不含注释和文档字符串)</th><td>631,848</td><td>599,739</td><td>−32,109</td></tr><tr class="total"><th scope="row">合计</th><td>862,476</td><td>663,124</td><td>−199,352</td></tr></tbody>
+    </table>
+  </div>
+
+  <h3>具体做了哪几类改动</h3>
+  <ul>
+    <li><strong>删注释和文档字符串。</strong>叙述性的文档字符串、教程式注释、TODO 和被注释掉的代码都删了;运行时能看到的文字(帮助信息、报错)、许可证声明保留。</li>
+    <li><strong>配置去重。</strong>重复的设置改用配置格式自带的继承来表达,例如 DensePose 的动物 CSE 和 evolution 配方抽出了共享的基础文件,ViTDet 和 MViTv2 的配方共用一份变体定义。解析出来的配置值与原版一致。</li>
+    <li><strong>删掉仓库周边文件。</strong>CI 工作流、Docker 文件、<code>setup.cfg</code>、<code>.clang-format</code> 等 24 个文件(24,016 tokens)不再存在;新增了 9 个共享文件(12,013 tokens)。</li>
+    <li><strong>少量共享化改写。</strong>跟踪器共用 ID 分配和配置读取,COCO 与 LVIS 评估器共用候选框召回计算,核心与 DeepLab 的 ResNet 共用阶段构建,DeepLab 的几个 head 共用预测和损失,ROI heads 共用池化器构建,各项目的训练脚本去重。</li>
+  </ul>
+
+  <figure class="fig">
+    <h3>各部分压缩后保留的比例</h3>
+    <div class="meters"><div class="meter-row"><div class="meter-name">detectron2/data</div><div class="meter" tabindex="0" data-tip="detectron2/data:222,079 → 206,462 tokens,保留 93.0%"><i style="width:93.0%"></i></div><div class="meter-fig"><span>222,079 → 206,462</span><b>93.0%</b></div></div><div class="meter-row"><div class="meter-name">projects/DensePose</div><div class="meter" tabindex="0" data-tip="projects/DensePose:160,558 → 116,496 tokens,保留 72.6%"><i style="width:72.6%"></i></div><div class="meter-fig"><span>160,558 → 116,496</span><b>72.6%</b></div></div><div class="meter-row"><div class="meter-name">detectron2/modeling</div><div class="meter" tabindex="0" data-tip="detectron2/modeling:101,039 → 66,318 tokens,保留 65.6%"><i style="width:65.6%"></i></div><div class="meter-fig"><span>101,039 → 66,318</span><b>65.6%</b></div></div><div class="meter-row"><div class="meter-name">detectron2/layers</div><div class="meter" tabindex="0" data-tip="detectron2/layers:64,975 → 52,485 tokens,保留 80.8%"><i style="width:80.8%"></i></div><div class="meter-fig"><span>64,975 → 52,485</span><b>80.8%</b></div></div><div class="meter-row"><div class="meter-name">detectron2/utils</div><div class="meter" tabindex="0" data-tip="detectron2/utils:35,719 → 24,628 tokens,保留 68.9%"><i style="width:68.9%"></i></div><div class="meter-fig"><span>35,719 → 24,628</span><b>68.9%</b></div></div><div class="meter-row"><div class="meter-name">detectron2/export</div><div class="meter" tabindex="0" data-tip="detectron2/export:31,530 → 27,587 tokens,保留 87.5%"><i style="width:87.5%"></i></div><div class="meter-fig"><span>31,530 → 27,587</span><b>87.5%</b></div></div><div class="meter-row"><div class="meter-name">detectron2/evaluation</div><div class="meter" tabindex="0" data-tip="detectron2/evaluation:25,353 → 18,502 tokens,保留 73.0%"><i style="width:73.0%"></i></div><div class="meter-fig"><span>25,353 → 18,502</span><b>73.0%</b></div></div><div class="meter-row"><div class="meter-name">configs</div><div class="meter" tabindex="0" data-tip="configs:24,466 → 22,364 tokens,保留 91.4%"><i style="width:91.4%"></i></div><div class="meter-fig"><span>24,466 → 22,364</span><b>91.4%</b></div></div><div class="meter-row"><div class="meter-name">detectron2/structures</div><div class="meter" tabindex="0" data-tip="detectron2/structures:19,204 → 10,083 tokens,保留 52.5%"><i style="width:52.5%"></i></div><div class="meter-fig"><span>19,204 → 10,083</span><b>52.5%</b></div></div><div class="meter-row"><div class="meter-name">detectron2/engine</div><div class="meter" tabindex="0" data-tip="detectron2/engine:16,388 → 10,947 tokens,保留 66.8%"><i style="width:66.8%"></i></div><div class="meter-fig"><span>16,388 → 10,947</span><b>66.8%</b></div></div><div class="meter-row"><div class="meter-name">projects/TensorMask</div><div class="meter" tabindex="0" data-tip="projects/TensorMask:16,189 → 10,192 tokens,保留 63.0%"><i style="width:63.0%"></i></div><div class="meter-fig"><span>16,189 → 10,192</span><b>63.0%</b></div></div><div class="meter-row"><div class="meter-name">detectron2/config</div><div class="meter" tabindex="0" data-tip="detectron2/config:16,148 → 9,033 tokens,保留 55.9%"><i style="width:55.9%"></i></div><div class="meter-fig"><span>16,148 → 9,033</span><b>55.9%</b></div></div><div class="meter-row"><div class="meter-name">projects/PointRend</div><div class="meter" tabindex="0" data-tip="projects/PointRend:15,549 → 11,432 tokens,保留 73.5%"><i style="width:73.5%"></i></div><div class="meter-fig"><span>15,549 → 11,432</span><b>73.5%</b></div></div><div class="meter-row"><div class="meter-name">tools</div><div class="meter" tabindex="0" data-tip="tools:14,745 → 13,194 tokens,保留 89.5%"><i style="width:89.5%"></i></div><div class="meter-fig"><span>14,745 → 13,194</span><b>89.5%</b></div></div><div class="meter-row"><div class="meter-name">其余(.github、docker、小项目等)</div><div class="meter" tabindex="0" data-tip="其余(.github、docker、小项目等):98,534 → 63,401 tokens,保留 64.3%"><i style="width:64.3%"></i></div><div class="meter-fig"><span>98,534 → 63,401</span><b>64.3%</b></div></div></div>
+    <figcaption><code>detectron2/data</code> 几乎没变,因为其中三个 LVIS 类别表文件就有 163,645 tokens(占交付版的 25%),它们是纯数据,没有可压缩的空间。除去这三个文件,其余部分保留 71.1%。</figcaption>
+  </figure>
+
+  <h3>缩减最多的文件</h3>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">文件</th><th>压缩前</th><th>压缩后</th><th>保留</th></tr></thead>
+      <tbody><tr><th scope="row"><code>detectron2/config/defaults.py</code></th><td>7,736</td><td>3,165</td><td>41%</td></tr><tr><th scope="row"><code>detectron2/utils/visualizer.py</code></th><td>11,768</td><td>7,616</td><td>65%</td></tr><tr><th scope="row"><code>detectron2/structures/rotated_boxes.py</code></th><td>5,332</td><td>1,376</td><td>26%</td></tr><tr><th scope="row"><code>projects/DensePose/densepose/evaluation/densepose_coco_evaluation.py</code></th><td>15,700</td><td>11,826</td><td>75%</td></tr><tr><th scope="row"><code>detectron2/modeling/roi_heads/roi_heads.py</code></th><td>8,091</td><td>4,542</td><td>56%</td></tr><tr><th scope="row"><code>projects/TensorMask/tensormask/arch.py</code></th><td>9,313</td><td>6,063</td><td>65%</td></tr><tr><th scope="row"><code>detectron2/data/transforms/augmentation_impl.py</code></th><td>6,446</td><td>4,101</td><td>64%</td></tr><tr><th scope="row"><code>detectron2/modeling/roi_heads/fast_rcnn.py</code></th><td>5,805</td><td>3,562</td><td>61%</td></tr></tbody>
+    </table>
+  </div>
+
+  <h3>和原版有多像</h3>
+  <p>把交付树和原版按相同路径逐行比对:646 个同路径文件里,83.8% 的行与原版完全相同。作者在沙箱里看不到原版,这些代码是模型凭训练时的记忆写出来的。第一个候选甚至有 98.7% 的行相同,连注释都照搬。所以这次的压缩率说明的是删注释和配置去重能省多少。重新设计实现能省多少,这次运行没有回答。</p>
+</section>
+
+<section id="time">
+  <h2>耗时</h2>
+  <p>从提交到交付共 11 小时 28 分(688 分钟)。作者会话占 56%;验证(基线、行为比对、GPU、安装)合计 235 分钟,占 34%。</p>
+  <figure class="fig">
+    <h3>688 分钟花在哪里</h3>
+    <div class="bars">
+<div class="bar-row"><div class="bar-name">作者会话(写代码、修复)</div><div class="bar-track"><span class="bar" style="width:76.00%" tabindex="0" data-tip="作者会话(写代码、修复):384 分"></span><span class="bar-val">384 分</span></div></div>
+<div class="bar-row"><div class="bar-name">采集基线(在原版上跑 160 项检查)</div><div class="bar-track"><span class="bar" style="width:19.66%" tabindex="0" data-tip="采集基线(在原版上跑 160 项检查):99 分"></span><span class="bar-val">99 分</span></div></div>
+<div class="bar-row"><div class="bar-name">行为比对(在候选上跑检查并对比)</div><div class="bar-track"><span class="bar" style="width:19.17%" tabindex="0" data-tip="行为比对(在候选上跑检查并对比):97 分"></span><span class="bar-val">97 分</span></div></div>
+<div class="bar-row"><div class="bar-name">其他 harness 操作(存候选、建环境、测体积、验收、交付)</div><div class="bar-track"><span class="bar" style="width:6.63%" tabindex="0" data-tip="其他 harness 操作(存候选、建环境、测体积、验收、交付):34 分"></span><span class="bar-val">34 分</span></div></div>
+<div class="bar-row"><div class="bar-name">GPU 对比(提交 Slurm 作业并等待)</div><div class="bar-track"><span class="bar" style="width:5.47%" tabindex="0" data-tip="GPU 对比(提交 Slurm 作业并等待):28 分"></span><span class="bar-val">28 分</span></div></div>
+<div class="bar-row"><div class="bar-name">操作之间的间隔(调度、等待 owner 输入)</div><div class="bar-track"><span class="bar" style="width:4.71%" tabindex="0" data-tip="操作之间的间隔(调度、等待 owner 输入):24 分"></span><span class="bar-val">24 分</span></div></div>
+<div class="bar-row"><div class="bar-name">控制器决策(11 次)</div><div class="bar-track"><span class="bar" style="width:2.40%" tabindex="0" data-tip="控制器决策(11 次):12 分"></span><span class="bar-val">12 分</span></div></div>
+<div class="bar-row"><div class="bar-name">安装检查(4 轮)</div><div class="bar-track"><span class="bar" style="width:2.24%" tabindex="0" data-tip="安装检查(4 轮):11 分"></span><span class="bar-val">11 分</span></div></div>
+    </div>
+    <figcaption>每验证一个候选要先在原版上跑一遍 160 项检查(约 20 分钟),再在候选上跑一遍(约 20 分钟)。GPU 对比每次提交一个 Slurm 作业,约 13 分钟,原版 1 次、候选 4 次。</figcaption>
+  </figure>
+</section>
+
+<section id="cost">
+  <h2>消耗的 tokens 和费用</h2>
+  <p>费用是每次模型会话结束时报告的金额之和,只包含作业内的控制器和作者,不包含监督这次运行的 owner 会话。输入 tokens 很大是因为每一轮工具调用都会把整个会话上下文重新送入模型,其中 98.0% 按缓存价计费。</p>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">角色</th><th>会话数</th><th>轮次</th><th>时长</th><th>输入 tokens</th><th>其中缓存命中</th><th>未命中缓存</th><th>输出 tokens</th><th>费用</th></tr></thead>
+      <tbody><tr><th scope="row">作者</th><td>7</td><td>608</td><td>6.3 小时</td><td>174,305,051</td><td>171,232,950</td><td>3,072,101</td><td>1,731,967</td><td>$167.94</td></tr><tr><th scope="row">控制器</th><td>11</td><td>75</td><td>0.2 小时</td><td>1,979,613</td><td>1,603,230</td><td>376,383</td><td>51,243</td><td>$9.23</td></tr><tr class="total"><th scope="row">合计</th><td>18</td><td>683</td><td>6.5 小时</td><td>176,284,664</td><td>172,836,180</td><td>3,448,484</td><td>1,783,210</td><td>$177.17</td></tr></tbody>
+    </table>
+  </div>
+  <figure class="fig">
+    <h3>每次会话的费用</h3>
+    <div class="bars">
+<div class="bar-row"><div class="bar-name">作者会话 1</div><div class="bar-track"><span class="bar" style="width:76.00%" tabindex="0" data-tip="作者会话 1:$47.02"></span><span class="bar-val">$47.02</span></div></div>
+<div class="bar-row"><div class="bar-name">作者会话 2</div><div class="bar-track"><span class="bar" style="width:58.56%" tabindex="0" data-tip="作者会话 2:$36.23"></span><span class="bar-val">$36.23</span></div></div>
+<div class="bar-row"><div class="bar-name">作者会话 3</div><div class="bar-track"><span class="bar" style="width:51.67%" tabindex="0" data-tip="作者会话 3:$31.97"></span><span class="bar-val">$31.97</span></div></div>
+<div class="bar-row"><div class="bar-name">作者会话 4</div><div class="bar-track"><span class="bar" style="width:50.59%" tabindex="0" data-tip="作者会话 4:$31.30"></span><span class="bar-val">$31.30</span></div></div>
+<div class="bar-row"><div class="bar-name">作者会话 5</div><div class="bar-track"><span class="bar" style="width:18.46%" tabindex="0" data-tip="作者会话 5:$11.42"></span><span class="bar-val">$11.42</span></div></div>
+<div class="bar-row"><div class="bar-name">作者会话 6</div><div class="bar-track"><span class="bar" style="width:13.30%" tabindex="0" data-tip="作者会话 6:$8.23"></span><span class="bar-val">$8.23</span></div></div>
+<div class="bar-row"><div class="bar-name">作者会话 7</div><div class="bar-track"><span class="bar" style="width:2.84%" tabindex="0" data-tip="作者会话 7:$1.76"></span><span class="bar-val">$1.76</span></div></div>
+<div class="bar-row"><div class="bar-name">控制器(11 次合计)</div><div class="bar-track"><span class="bar" style="width:14.92%" tabindex="0" data-tip="控制器(11 次合计):$9.23"></span><span class="bar-val">$9.23</span></div></div>
+    </div>
+    <figcaption>第 1 次作者会话的 $47.02 基本浪费了:沙箱配置的缺陷让它无法导入任何第三方依赖,写出的代码没有执行过。后三次是针对具体失败的小修复,合计 $21.41。</figcaption>
+  </figure>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">作者会话</th><th>开始(UTC)</th><th>时长</th><th>轮次</th><th>输出 tokens</th><th>费用</th><th class="txt">做了什么</th><th class="txt">产出</th></tr></thead>
+      <tbody><tr><th scope="row">1</th><td>11:47</td><td>76 分</td><td>119</td><td>506,702</td><td>$47.02</td><td class="txt">首轮实现。沙箱配置有缺陷,第三方依赖无法导入,写出的代码一行都没执行过。</td><td class="txt">候选 1</td></tr><tr><th scope="row">2</th><td>13:08</td><td>79 分</td><td>127</td><td>378,567</td><td>$36.23</td><td class="txt">环境修好后第一次构建、导入和冒烟测试;补到 88 / 106 项功能。</td><td class="txt">候选 2</td></tr><tr><th scope="row">3</th><td>14:30</td><td>63 分</td><td>103</td><td>330,308</td><td>$31.97</td><td class="txt">按风格指令删除照搬的注释和文档字符串;新写的项目改用共享基类;补到 103 / 106 项。</td><td class="txt">候选 3</td></tr><tr><th scope="row">4</th><td>16:22</td><td>63 分</td><td>103</td><td>321,534</td><td>$31.30</td><td class="txt">修复首次验证失败的 7 项检查(补写 Caffe2 导出、DensePose 训练与可视化等约 290 kB);做了 6 处共享化改写。</td><td class="txt">候选 4</td></tr><tr><th scope="row">5</th><td>18:36</td><td>47 分</td><td>77</td><td>96,051</td><td>$11.42</td><td class="txt">修复 TorchScript 回归;在没有失败细节的情况下排查 GPU 问题,并自行改动了旋转框 IoU 算法。</td><td class="txt">候选 5</td></tr><tr><th scope="row">6</th><td>20:21</td><td>31 分</td><td>57</td><td>81,608</td><td>$8.23</td><td class="txt">把旋转框 IoU 改回原算法;按 owner 提供的报错修好 TensorMask 的 CUDA 构建。</td><td class="txt">候选 6</td></tr><tr><th scope="row">7</th><td>21:50</td><td>16 分</td><td>22</td><td>17,197</td><td>$1.76</td><td class="txt">把旋转框 IoU 主机分支的排序改成与 CUDA 分支共用的实现。</td><td class="txt">候选 7</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<section id="process">
+  <h2>压缩流程</h2>
+  <p>nanolize 的做法是让一个看不到原版代码的模型,根据一份行为说明把仓库重新写一遍,再用原版的检查来验证新代码的行为和原版一致。流程里有四个角色。</p>
+  <figure class="fig diagram">
+    <div class="scroll-x">
+      <svg viewBox="0 0 1010 470" role="img" aria-label="原版仓库被提取成知识包,作者在沙箱里只读知识包来编写候选代码;验证 harness 在原版和候选上跑同一套检查,把通过或失败交给控制器;控制器把指令和反馈交给作者,全部通过后交付。">
+        <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.4">
+          <rect x="20" y="50" width="180" height="70" rx="6"/>
+          <rect x="270" y="50" width="200" height="70" rx="6"/>
+          <rect x="540" y="50" width="200" height="70" rx="6" stroke-width="2.2" style="stroke:var(--s1)"/>
+          <rect x="810" y="50" width="170" height="70" rx="6"/>
+          <rect x="20" y="250" width="180" height="70" rx="6"/>
+          <rect x="270" y="250" width="200" height="70" rx="6"/>
+          <rect x="570" y="250" width="410" height="70" rx="6"/>
+          <rect x="270" y="390" width="200" height="60" rx="6"/>
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#arr)">
+          <path d="M200 85 H268"/>
+          <path d="M470 85 H538"/>
+          <path d="M740 85 H808"/>
+          <path d="M895 120 V248"/>
+          <path d="M110 50 V26 H996 V285 H982"/>
+          <path d="M570 285 H472"/>
+          <path d="M370 250 V185 H640 V122"/>
+          <path d="M200 285 H268"/>
+          <path d="M370 320 V388"/>
+        </g>
+        <g fill="currentColor" stroke="none" font-size="14" font-weight="600" text-anchor="middle">
+          <text x="110" y="81">原版仓库</text>
+          <text x="370" y="81">知识包与契约</text>
+          <text x="640" y="81">作者(沙箱内)</text>
+          <text x="895" y="81">候选代码</text>
+          <text x="110" y="281">Owner</text>
+          <text x="370" y="281">控制器</text>
+          <text x="775" y="281">验证 harness</text>
+          <text x="370" y="417">交付</text>
+        </g>
+        <g fill="currentColor" stroke="none" font-size="12" text-anchor="middle" opacity=".82">
+          <text x="110" y="102">detectron2 @ 247691a</text>
+          <text x="370" y="102">106 项功能 · 9,177 条契约</text>
+          <text x="640" y="102">看不到原版源码和测试</text>
+          <text x="895" y="102">每轮保存为一次提交</text>
+          <text x="110" y="302">回答提问、提供诊断</text>
+          <text x="370" y="302">决定下一步调用哪个工具</text>
+          <text x="775" y="302">CPU 160 项 · GPU 66 个文件 · 安装 4 项 · 覆盖 · 体积</text>
+          <text x="370" y="437">选定候选,写入结果分支</text>
+          <text x="234" y="76">提取</text>
+          <text x="504" y="76">只读</text>
+          <text x="774" y="76">编写</text>
+          <text x="553" y="18">在原版上跑同一套检查,得到基线输出</text>
+          <text x="887" y="190" text-anchor="end">在候选上跑同一套检查</text>
+          <text x="521" y="277">通过 / 失败</text>
+          <text x="505" y="178">指令 + 上一轮的反馈</text>
+          <text x="234" y="277">答复</text>
+          <text x="380" y="360" text-anchor="start">全部通过后</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>原版代码只进入两个地方:事先提取的知识包(不含实现),和验证 harness。作者(蓝框)只能读知识包、契约和上一轮的失败反馈。控制器也看不到原版和测试代码,只知道每项检查通过与否。</figcaption>
+  </figure>
+
+  <h3>四个角色</h3>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">角色</th><th class="txt">是什么</th><th class="txt">能看到</th><th class="txt">看不到</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">控制器</th><td class="txt">一个无界面的模型会话。每一轮读取作业状态,输出一串工具调用,由 harness 依次执行。</td><td class="txt">契约、知识包、每项检查的通过或失败、体积测量、作者的会话总结</td><td class="txt">原版源码、测试代码、检查的具体输出</td></tr>
+        <tr><th scope="row">作者</th><td class="txt">另一个模型会话,在沙箱里写代码和修复。每次会话上限 110 分钟,只有 Bash、读、改、写四种工具。</td><td class="txt">自己的工作区、契约、知识包、上一轮的失败反馈(哪项功能、哪类失败)、owner 批准的诊断</td><td class="txt">原版源码和测试、Git 历史、其他运行的产物、缓存里的任何原版副本</td></tr>
+        <tr><th scope="row">Harness</th><td class="txt">nanolize 的确定性程序,不是模型。执行检查、保存证据、判定验收。</td><td class="txt">原版和候选两棵树、全部检查</td><td class="txt">不适用</td></tr>
+        <tr><th scope="row">Owner</th><td class="txt">发起并监督运行的一方,本次由一个 Claude 会话代行。回答控制器的提问,把失败细节转述成不含原版源码的诊断。</td><td class="txt">全部,包括原版和检查细节</td><td class="txt">不适用,但交给作者的内容不得包含原版源码</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>步骤</h3>
+  <ol>
+    <li><strong>冻结输入。</strong>固定原版提交;从原版分析出 106 项功能和一份知识包(9,177 条行为契约,其中 1,340 条是 owner 复核后补充的),知识包描述公开接口、类型、校验、报错和数值行为,不包含实现代码。同时冻结 160 项 CPU 行为检查、GPU 上的 66 个上游测试文件、4 项安装检查,以及体积基线 862,476 tokens。</li>
+    <li><strong>订立契约。</strong>控制器保存契约:保留全部 106 项功能,实现要简洁可读,没有强制压缩率,功能和安装通过后不再做纯体积优化,如实报告实际体积。契约还规定不得删功能、不得写占位实现、不得把代码压成一行或编码成数据。</li>
+    <li><strong>作者实现。</strong>控制器调用 <code>run_agent</code>,把指令交给作者。作者在沙箱里按知识包写代码,自己构建、导入、跑冒烟测试,并维护一份进度笔记。</li>
+    <li><strong>保存候选。</strong><code>save_candidate</code> 把工作区保存为结果分支上的一次提交。</li>
+    <li><strong>构建环境并采集基线。</strong><code>prepare_environment</code> 编译候选的原生扩展;<code>capture_baseline</code> 在原版上跑全部 160 项检查,记录输出作为基线。</li>
+    <li><strong>行为比对。</strong><code>compare_behavior</code> 在候选上跑同样的检查,逐项和基线对比。160 项里有 71 项是上游自带的测试,38 项是运行时入口检查,28 项是按功能分组的 CPU 行为套件,23 项是各子项目的特征检查。</li>
+    <li><strong>追加检查。</strong><code>run_checks</code> 确认加载的原生扩展出自候选自己的构建,并在 GPU 节点上重新编译候选、跑 66 个上游测试文件(366 个测试),和原版逐项对比;<code>check_installation</code> 做 4 项全新安装检查(构建依赖、只安装候选、已安装的接口和打包资源、已安装的 Faster R-CNN CPU 推理);<code>audit_coverage</code> 审计功能覆盖;<code>measure_code</code> 测体积。</li>
+    <li><strong>修复循环。</strong>有失败就回到第 3 步:控制器把失败证据写进指令,开一次修复会话。作者拿到的反馈只说哪项功能、哪类失败,不给测试代码和期望输出;控制器信息不够时可以向 owner 提问。</li>
+    <li><strong>验收和交付。</strong><code>evaluate_acceptance</code> 要求同时满足:完整的行为比对通过、覆盖审计通过、安装通过、GPU 和原生扩展检查通过、候选已被选定。之后 <code>select_candidate</code>、<code>deliver</code>,结果写入分支。</li>
+  </ol>
+  <p>作者的沙箱用 bubblewrap 搭建:临时目录是全新的,只有工作区可写,依赖只读挂载,owner 的目录和可能含有原版副本的缓存目录都被遮住。事后审计了全部 18 次会话的工具调用,没有发现读取工作区和依赖目录以外路径的调用,也没有执行联网命令。</p>
+</section>
+
+<section id="run">
+  <h2>本次运行的经过</h2>
+  <p>共产生 7 个候选。前两个没有经过验证,第 6 个第一次通过全部配置的检查,第 7 个修掉了检查之外发现的缺陷后交付。时间都是 UTC。</p>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">候选</th><th>保存</th><th>功能覆盖</th><th>CPU 行为</th><th>GPU 对比</th><th>安装</th><th>体积(tokens)</th><th class="txt">说明</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1</th><td>13:04</td><td>—</td><td><span class="pill na">未验证</span></td><td><span class="pill na">未验证</span></td><td><span class="pill na">未验证</span></td><td>—</td><td class="txt">代码没有执行过;与原版逐行相同的比例是 98.7%</td></tr>
+        <tr><th scope="row">2</th><td>14:28</td><td>88 / 106</td><td><span class="pill na">未验证</span></td><td><span class="pill na">未验证</span></td><td><span class="pill na">未验证</span></td><td>—</td><td class="txt">第一次能构建和导入</td></tr>
+        <tr><th scope="row">3</th><td>15:34</td><td>103 / 106</td><td><span class="pill bad"><i aria-hidden="true">✗</i>153 / 160</span></td><td><span class="pill na">未跑</span></td><td><span class="pill na">未跑</span></td><td>约 610,000(70.8%)</td><td class="txt">首次验证。7 项失败集中在训练入口、部署工具、Caffe2 导出和 DensePose</td></tr>
+        <tr><th scope="row">4</th><td>17:27</td><td>106 / 106</td><td><span class="pill bad"><i aria-hidden="true">✗</i>159 / 160</span></td><td><span class="pill bad"><i aria-hidden="true">✗</i>357 / 360</span></td><td><span class="pill ok"><i aria-hidden="true">✓</i>4 / 4</span></td><td>663,730(77.0%)</td><td class="txt">补齐缺失功能后体积回升。剩 TorchScript 回归和 TensorMask 的 CUDA 构建失败</td></tr>
+        <tr><th scope="row">5</th><td>19:25</td><td>106 / 106</td><td><span class="pill bad"><i aria-hidden="true">✗</i>159 / 160</span></td><td><span class="pill bad"><i aria-hidden="true">✗</i>358 / 360</span></td><td><span class="pill ok"><i aria-hidden="true">✓</i>4 / 4</span></td><td>663,143</td><td class="txt">TorchScript 修好;作者改动旋转框 IoU 引入了新的回归</td></tr>
+        <tr><th scope="row">6</th><td>20:53</td><td>106 / 106</td><td><span class="pill ok"><i aria-hidden="true">✓</i>160 / 160</span></td><td><span class="pill ok"><i aria-hidden="true">✓</i>360 / 360</span></td><td><span class="pill ok"><i aria-hidden="true">✓</i>4 / 4</span></td><td>663,265</td><td class="txt">配置的检查全部通过;owner 对拍发现旋转框 IoU 在重复框上会让进程崩溃</td></tr>
+        <tr><th scope="row">7</th><td>22:07</td><td>106 / 106</td><td><span class="pill ok"><i aria-hidden="true">✓</i>160 / 160</span></td><td><span class="pill ok"><i aria-hidden="true">✓</i>360 / 360</span></td><td><span class="pill ok"><i aria-hidden="true">✓</i>4 / 4</span></td><td>663,124(76.89%)</td><td class="txt">对拍结果与原版逐位一致。23:09 交付</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>GPU 一栏的分母是原版在同一节点上通过的 360 个测试;原版自己有 1 个测试失败、5 个跳过,候选在这 6 个上的结果与原版相同。</p>
+
+  <h3>Owner 的干预</h3>
+  <p>这次运行不是无人干预的结果。Owner 一共改了 7 次冻结输入,回答了 1 次提问,提交了 2 份诊断。每次修改前后的校验和都记录在案。</p>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th>时间</th><th class="txt">做了什么</th><th class="txt">原因</th></tr></thead>
+      <tbody>
+        <tr><td>13:05</td><td class="txt">修复作者沙箱:只读挂载依赖缓存指向的目录</td><td class="txt">沙箱把依赖的实际位置遮住了,第 1 次会话无法导入任何第三方包。这是 owner 自己搭沙箱时的失误</td></tr>
+        <tr><td>13:06</td><td class="txt">追加环境通知</td><td class="txt">告诉作者依赖已可用,之前的代码没有执行过,要先构建和导入</td></tr>
+        <tr><td>13:47</td><td class="txt">追加风格指令:要求简洁的自有实现</td><td class="txt">诊断显示同路径文件 87% 的行与上游相同,作者在照搬上游,包括注释</td></tr>
+        <tr><td>13:48</td><td class="txt">加固沙箱:遮住家目录下的包缓存和会话存储</td><td class="txt">这些目录里有原版的副本。审计确认此前的会话没有读过它们</td></tr>
+        <tr><td>17:31</td><td class="txt">收紧风格指令:改写不再是验收的前提</td><td class="txt">实测一次会话只能结构性改写几个模块,整棵树重写需要几十次会话;任务要求是功能和安装通过后停止纯体积优化</td></tr>
+        <tr><td>18:36</td><td class="txt">回答控制器的提问并提交诊断</td><td class="txt">Harness 只把 GPU 检查的退出码交给控制器;具体哪些测试失败、报什么错,需要 owner 转述</td></tr>
+        <tr><td>21:16</td><td class="txt">通报旋转框 IoU 的缺陷,要求修好后才能验收</td><td class="txt">见下一节</td></tr>
+        <tr><td>22:53</td><td class="txt">确认缺陷已修复,解除限制</td><td class="txt">对拍 29,200 对输入,与原版逐位一致</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="defect">
+  <h2>检查之外发现的一个缺陷</h2>
+  <p>候选 6 通过了全部 160 项 CPU 检查和 GPU 对比,但作者在笔记里两次提到旋转框 IoU 的实现可疑。Owner 用原版和候选的同一套构建,对相同的随机旋转框做了对拍:</p>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">输入</th><th class="txt">原版</th><th class="txt">候选 6</th><th class="txt">候选 7(修复后)</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">7,100 对普通框(相交、不相交、轴对齐、细长)</th><td class="txt">—</td><td class="txt">与原版逐位一致</td><td class="txt">与原版逐位一致</td></tr>
+        <tr><th scope="row">600 个框与自身求 IoU(批量)</th><td class="txt">正常</td><td class="txt">进程崩溃(stack smashing)</td><td class="txt">正常,输出与原版相同</td></tr>
+        <tr><th scope="row">含重复框的旋转 NMS</th><td class="txt">正常</td><td class="txt">进程崩溃</td><td class="txt">正常,结果与原版相同</td></tr>
+        <tr><th scope="row">20,000 个自重叠中与原版不同的值</th><td class="txt">—</td><td class="txt">336 个</td><td class="txt">0 个</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>原因是作者凭记忆写出的是上游较早的版本:CPU 分支用 <code>std::sort</code> 配一个带容差的比较器给凸包顶点排序,这个比较器不满足严格弱序,属于未定义行为。会不会崩溃取决于编译器和编译选项,在 CPU 检查用的那套构建上只是算错,不崩溃,所以没有被发现。修复方法是让 CPU 分支改用 CUDA 分支已有的逐对交换排序。</p>
+  <p>这件事说明检查全部通过不等于行为与原版等价。其他模块里可能还有同类但没被发现的差异。</p>
+</section>
+
+<section id="gaps">
+  <h2>已知缺口</h2>
+  <ul>
+    <li><strong>报告页没有生成。</strong>交付成功,但 harness 自带的报告站点生成失败,报错是映射文件必须指向候选仓库里的源码文件。推测是作者的功能映射里包含了 187 个配置文件,而报告生成器只接受源码文件;这个推测没有验证。</li>
+    <li><strong>没有真实执行过的代码路径。</strong>Caffe2 导出的 7 个模块只在桩模块上运行过,环境里没有 caffe2;DensePose 的视频读取没有运行,环境里没有 PyAV。</li>
+    <li><strong>覆盖盲区。</strong>原版在 GPU 节点上失败的 1 个测试和跳过的 5 个测试,对候选同样没有验证力。</li>
+    <li><strong>作者自报的偏离。</strong>PyAV 改成了可选导入;修正了原版的几处缺陷(例如 CSE 评估里写死的设备名),没有照原样复现。这些改动通过了检查,但严格来说与原版行为不同。</li>
+    <li><strong>交付树里带着作者的进度笔记。</strong><code>PROGRESS.md</code>(8,022 tokens)按文档计,不计入体积。控制器的交付说明里写的 671,146 tokens(77.8%)把它算了进去。</li>
+  </ul>
+  <p>如果需要真正重写、压缩率更高的结果,要么另开一轮并接受几十次会话的成本,要么换一个对上游代码没有记忆的作者模型。</p>
+</section>
+
+<section id="method">
+  <h2>测量口径</h2>
+  <ul>
+    <li><strong>tokens。</strong>tiktoken 0.12.0 的 <code>cl100k_base</code> 编码,每个文件单独计数后求和。统计源码和配置两类文件;没有改动的原版测试(81 个文件)、文档和二进制资源不计入。压缩前后使用 harness 的同一个测量函数。</li>
+    <li><strong>注释和文档字符串的拆分。</strong>Python 用标准库的分词器识别注释和独立的字符串语句;C++ 和 CUDA 用正则匹配注释;YAML 统计整行注释。这是按文件类型做的估算。</li>
+    <li><strong>与原版的相似度。</strong>对同路径文件做逐行最长公共子序列匹配,统计相同行的比例,不含测试目录。</li>
+    <li><strong>耗时。</strong>来自作业记录里每个操作的起止时间。作者会话的 384 分钟包含启动和重试的开销,模型实际运行 376 分钟。</li>
+    <li><strong>费用和模型 tokens。</strong>每次会话结束时由 Claude Code 报告,18 次会话求和。输入 tokens 包含缓存命中的部分。</li>
+  </ul>
+</section>
+
+<footer>数据来自作业 43a540d8 的运行记录,生成于 2026-11-10。检查通过不能证明语义完全等价。</footer>
+</div>
+<div id="tip" role="tooltip" hidden></div>
+<script>
+(function(){
+  var tip=document.getElementById('tip');
+  function show(el,x,y){
+    tip.textContent=el.getAttribute('data-tip'); tip.hidden=false;
+    var r=tip.getBoundingClientRect();
+    var left=Math.min(Math.max(8,x+12),window.innerWidth-r.width-8);
+    var top=y-r.height-12; if(top<8){top=y+16;}
+    tip.style.left=left+'px'; tip.style.top=top+'px';
+  }
+  function hide(){tip.hidden=true;}
+  document.querySelectorAll('[data-tip]').forEach(function(el){
+    el.addEventListener('pointermove',function(e){show(el,e.clientX,e.clientY);});
+    el.addEventListener('pointerleave',hide);
+    el.addEventListener('focus',function(){var r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top);});
+    el.addEventListener('blur',hide);
+  });
+})();
+</script>
+
+</body>
+</html>
