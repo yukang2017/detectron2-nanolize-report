@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>nanolize 流程修改建议</title>
+<meta name="description" content="依据 detectron2 上的五次实验，对 nanolize 流程给出 33 条修改建议。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column; figures and tables use the full column, numbers sit in a mono utility face. */
+:root{
+  --bg:#f3f5f8; --surface:#fbfcfd; --ink:#131820; --ink-2:#465061; --muted:#727c8c; --rule:#dde2ea;
+  --accent:#2a78d6; --accent-soft:#cde2fb;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --on-s4:#0b0b0b;
+  --good-ink:#006300; --crit-ink:#b3261e;
+  --font-display:"Space Grotesk","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-body:"IBM Plex Sans","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,"Noto Sans SC",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1115; --surface:#171a1f; --ink:#eceff3; --ink-2:#b8c0cc; --muted:#8a94a3; --rule:#2a3039;
+  --accent:#3987e5; --accent-soft:#17395f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --on-s4:#ffffff;
+  --good-ink:#35c035; --crit-ink:#f07a72; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0e1115; --surface:#171a1f; --ink:#eceff3; --ink-2:#b8c0cc; --muted:#8a94a3; --rule:#2a3039;
+  --accent:#3987e5; --accent-soft:#17395f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --on-s4:#ffffff;
+  --good-ink:#35c035; --crit-ink:#f07a72; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 72px}
+.page{max-width:920px;margin-inline:auto;display:grid;gap:56px}
+.page > *{min-width:0}
+header{display:grid;gap:20px}
+.eyebrow{font:500 12.5px/1.5 var(--font-mono);letter-spacing:.05em;color:var(--muted);margin:0}
+h1{font:600 clamp(28px,5vw,40px)/1.2 var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 22px/1.3 var(--font-display);margin:0;text-wrap:balance}
+h3{font:600 15.5px/1.45 var(--font-body);margin:0;text-wrap:balance}
+p{margin:0;max-width:44em}
+.lede{font-size:17px;color:var(--ink-2)}
+section{display:grid;gap:18px}
+section > *{min-width:0}
+ul,ol{margin:0;padding-left:1.35em;max-width:44em;display:grid;gap:8px}
+a{color:var(--accent)}
+code{font-family:var(--font-mono);font-size:.88em;background:color-mix(in srgb,var(--ink) 7%,transparent);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+nav{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
+nav a{text-decoration:none;border-bottom:1px solid var(--rule)}
+nav a:hover{border-bottom-color:var(--accent)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14px;margin:0;max-width:44em}
+.facts dt{color:var(--muted);white-space:nowrap}
+.facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;display:grid;gap:4px;align-content:start}
+.kpi .k{font-size:13px;color:var(--muted)}
+.kpi .v{font:600 28px/1.2 var(--font-display);letter-spacing:-.01em}
+.kpi .s{font-size:13px;color:var(--ink-2);line-height:1.5}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 13px/1.2 var(--font-body);padding:6px 10px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);white-space:nowrap;color:var(--ink)}
+.pill i{font-style:normal;font-weight:700}
+.pill.ok i{color:var(--good-ink)} .pill.bad i{color:var(--crit-ink)} .pill.na{color:var(--muted)}
+td .pill{padding:3px 8px;font-size:12.5px}
+.fig{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:20px;display:grid;gap:16px}
+.fig > *{min-width:0}
+figcaption{font-size:13.5px;color:var(--ink-2);line-height:1.6;max-width:46em}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--ink-2);max-width:none}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.s1{background:var(--s1)} .s2{background:var(--s2)} .s3{background:var(--s3)} .s4{background:var(--s4)}
+.bars{display:grid;gap:10px}
+.bar-row{display:grid;grid-template-columns:minmax(0,17em) minmax(0,1fr);gap:4px 14px;align-items:center;font-size:13.5px}
+.bar-name{color:var(--ink-2);line-height:1.45}
+.bar-track{display:flex;align-items:center;gap:8px;min-width:0}
+.bar{display:block;height:18px;min-width:2px;border-radius:0 4px 4px 0;background:var(--s1);flex:0 0 auto}
+.bar-val{font:500 13px var(--font-mono);color:var(--ink);white-space:nowrap}
+.stack{display:flex;gap:2px;height:22px;flex:0 0 auto}
+.seg{display:block;min-width:2px}
+.seg.end{border-radius:0 4px 4px 0}
+.segbar{display:flex;gap:2px;height:28px}
+.blk{border-radius:4px;display:flex;align-items:center;padding-left:8px;min-width:0;color:#fff;font:600 12px var(--font-mono)}
+.blk.s4{color:var(--on-s4)}
+.meters{display:grid;gap:11px}
+.meter-row{display:grid;grid-template-columns:minmax(0,15em) minmax(60px,1fr) auto;gap:6px 14px;align-items:center;font-size:13.5px}
+.meter-name{color:var(--ink-2);overflow-wrap:anywhere}
+.meter{height:8px;border-radius:999px;background:var(--accent-soft)}
+.meter i{display:block;height:100%;border-radius:999px;background:var(--s1)}
+.meter-fig{display:flex;gap:10px;justify-content:flex-end;font-family:var(--font-mono);font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.meter-fig b{color:var(--ink);font-weight:600;min-width:3.6em;text-align:right}
+.scroll-x{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.5}
+th,td{padding:8px 12px;border-bottom:1px solid var(--rule);text-align:right;vertical-align:top;font-variant-numeric:tabular-nums}
+thead th{font-weight:500;color:var(--muted);font-size:12.5px;white-space:nowrap;vertical-align:bottom}
+tbody th{text-align:left;font-weight:500}
+td{font-family:var(--font-mono);font-size:13px;white-space:nowrap}
+td.txt,th.txt{text-align:left;font-family:var(--font-body);font-size:14px;white-space:normal;min-width:11em}
+tr.total th,tr.total td{font-weight:600;border-top:1px solid var(--ink-2)}
+.diagram svg{display:block;width:100%;height:auto;min-width:760px;color:var(--ink);font-family:var(--font-body)}
+[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.45;padding:6px 9px;border-radius:6px;max-width:260px}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--rule);padding-top:20px}
+@media (max-width:640px){
+  .bar-row{grid-template-columns:minmax(0,1fr)}
+  .meter-row{grid-template-columns:minmax(0,1fr) auto}
+  .meter{grid-column:1 / -1;order:3}
+  .fig{padding:16px}
+}
+
+.note{font-size:14px;color:var(--ink-2)}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.bars .bar{width:calc(var(--w,1)*76%)}
+table.prose th,table.prose td{text-align:left;font-family:var(--font-body);font-size:14px;white-space:normal;line-height:1.55}
+table.prose tbody th{min-width:9.5em;font-weight:500;color:var(--ink-2)}
+table.prose td{min-width:10em}
+table.num td{font-family:var(--font-mono)}
+table.num tbody th,table.num thead th:first-child{text-align:left}
+table.matrix th,table.matrix td{text-align:center;white-space:nowrap;vertical-align:middle}
+table.matrix td.txt,table.matrix th.txt{text-align:left;white-space:normal;font-family:var(--font-body);font-size:14px}
+table.matrix tbody th{font:500 13px var(--font-mono);text-align:left}
+table.matrix tr.grp th{text-align:left;font:600 13.5px var(--font-body);color:var(--ink);background:color-mix(in srgb,var(--ink) 5%,transparent);padding-top:10px}
+table.matrix a{text-decoration:none}
+.dot{color:var(--ink-2);font-size:12px}
+.cmp{display:grid;gap:12px}
+.cmp-row{display:grid;grid-template-columns:minmax(0,11em) minmax(0,1fr);gap:6px 14px;align-items:center;font-size:13.5px}
+.group{display:grid;gap:12px;margin-top:10px}
+.rec{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px 20px;display:grid;gap:10px;scroll-margin-top:16px}
+.rec h4{margin:0;font:600 16px/1.45 var(--font-body);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;text-wrap:balance}
+.rid{font:600 12.5px var(--font-mono);color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{display:inline-block;font:500 12px/1.2 var(--font-body);padding:4px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2);white-space:nowrap}
+.tag.p0{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tag.p1{border-color:var(--ink-2);color:var(--ink)}
+.tag.st{border-style:dashed}
+.rec dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:0;font-size:14.5px;line-height:1.65}
+.rec dt{color:var(--muted);white-space:nowrap}
+.rec dd{margin:0;min-width:0}
+.diagram svg{min-width:860px}
+h3[id],section[id],article[id]{scroll-margin-top:16px}
+@media (max-width:640px){
+  .cmp-row{grid-template-columns:minmax(0,1fr)}
+  .bars .bar{width:calc(var(--w,1)*50%)}
+  .rec{padding:16px}
+  .rec dl{grid-template-columns:minmax(0,1fr);gap:2px 0}
+  .rec dt{margin-top:8px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">NANOLIZE · 流程修改建议 · 2026-11-11</p>
+  <h1>nanolize 流程修改建议</h1>
+  <p class="lede">依据 detectron2 上的五次实验和分支源码，整理出 33 条修改建议。目标是三件事：生成的代码质量更高，压缩过程更省时间，更省 tokens。其中 8 条建议优先做。</p>
+  <dl class="facts">
+    <dt>依据的实验</dt><dd>三次 nanolize 流程运行（作者分别是 Fable 5.2、Codex、Codex）、一次 goal 模式、一次单会话改写</dd>
+    <dt>对象</dt><dd>detectron2，上游提交 <code>247691a</code>，106 个功能，160 个 CPU 检查</dd>
+    <dt>工具分支</dt><dd><code>codex/controller-history-recovery</code>（<code>55ceb83</code>）和它的两个后继分支</dd>
+    <dt>数据截至</dt><dd>2026-11-11 02:00 UTC</dd>
+  </dl>
+  <div class="kpis">
+    <div class="kpi"><span class="k">流程运行（Fable 作者）</span><span class="v">11 小时 28 分</span><span class="s">$177，已交付，体积是原版的 76.9%</span></div>
+    <div class="kpi"><span class="k">goal 模式</span><span class="v">6 小时</span><span class="s">$703，体积更小，盲评 12 个文件全部更优</span></div>
+    <div class="kpi"><span class="k">流程运行里的验证</span><span class="v">254 分钟</span><span class="s">占墙钟的 37%，改一个文件也要等约 50 分钟</span></div>
+    <div class="kpi"><span class="k">公开接口有文档字符串</span><span class="v">55.6% → 13.5%</span><span class="s">Codex 作者的两次运行是 0%</span></div>
+    <div class="kpi"><span class="k">知识包</span><span class="v">235 万 tokens</span><span class="s">原版源码的 2.7 倍，57% 是拆碎的数据</span></div>
+    <div class="kpi"><span class="k">无人值守时空等 owner</span><span class="v">6 到 7 小时</span><span class="s">两个 Codex 运行各一次，都在等失败诊断，至今未交付</span></div>
+  </div>
+  <nav aria-label="目录">
+    <a href="#findings">结论</a><a href="#runs">五次实验</a><a href="#diagnosis">现状诊断</a><a href="#compare">与 goal 模式对比</a><a href="#recs">修改建议</a><a href="#roadmap">落地顺序</a><a href="#keep">不该照搬的</a><a href="#verify">怎么验证</a><a href="#method">口径与局限</a>
+  </nav>
+</header>
+
+<section id="findings">
+  <h2>结论</h2>
+  <p>最该改的是五件事，按收益排序。括号里是对应的建议编号。</p>
+  <ol>
+    <li><strong>失败原因传不到 controller 和作者，作者也不能自己验证。</strong>现在两者只能看到退出码，诊断全靠 owner 手写。两个 Codex 运行的 13 个澄清请求里有 11 个是在要诊断，分别空等了 369 和 444 分钟，跑了 20.4 和 15.6 小时仍未交付。（<a href="#A1">A1</a>、<a href="#A2">A2</a>）</li>
+    <li><strong>验证慢。</strong>160 个检查串行执行，原版基线每个候选重采一遍，每个操作都重做全仓库快照。（<a href="#B1">B1</a>、<a href="#B2">B2</a>、<a href="#B4">B4</a>）</li>
+    <li><strong>策略和度量在奖励删文档。</strong>改写策略原文要求“激进删除文档和注释”，体积度量又把注释算进去。盲评 12 个文件全部输给 goal 模式。（<a href="#E1">E1</a>）</li>
+    <li><strong>知识包比源码还大，而且没人知道作者读了什么。</strong>Fable 作者只读了约 11%，其余靠记忆默写上游；Codex 作者把整包读了一遍。（<a href="#D1">D1</a>、<a href="#D2">D2</a>、<a href="#D4">D4</a>）</li>
+    <li><strong>质量最好的做法在流程之外。</strong>goal 模式先造对拍工具，按范围并行，作者看着源码原地改写并且每步都验证。它 6 小时交付，原生算子逐位一致。但它花了 $703，用量不该照搬。（<a href="#C1">C1</a>、<a href="#E2">E2</a>、<a href="#F1">F1</a>）</li>
+  </ol>
+  <p>按本次流程运行的时间线估算，验证提速加并行作者可以把 11.5 小时压到 5.5 到 6.5 小时；文档策略的修改不增加成本。这些是估算，没有实测，拆解见<a href="#roadmap">落地顺序</a>。</p>
+</section>
+<section id="runs"><h2>五次实验</h2><p>同一套流程下，换作者模型结果差别很大；质量最好的代码来自流程之外的 goal 模式。</p><h3>同一流程的三次运行</h3><p class="note">三次都是全部 106 个功能、160 个 CPU 检查、作者不看源码。两个 Codex 运行还没结束。</p><div class="scroll-x"><table class="prose" style="min-width:720px"><thead><tr><th scope="col"></th><th scope="col">本次运行</th><th scope="col">Codex，基线复用分支</th><th scope="col">Codex，高效验证分支</th></tr></thead><tbody><tr><th scope="row">工具分支（提交）</th><td><code>controller-history-recovery</code>（55ceb83）</td><td><code>controller-baseline-reuse-repair-context</code>（0c6478f）</td><td><code>controller-efficient-verification</code>（7e1b722）</td></tr><tr><th scope="row">作者模型</th><td>Fable 5.2</td><td>Codex</td><td>Codex</td></tr><tr><th scope="row">状态</th><td>已交付</td><td>未交付，停在等 owner 诊断 GPU 检查</td><td>未交付，停在等 owner 诊断 GPU 检查</td></tr><tr><th scope="row">墙钟</th><td>11 小时 28 分</td><td>20.4 小时</td><td>15.6 小时</td></tr><tr><th scope="row">无操作的空闲</th><td>24 分钟</td><td>369 分钟</td><td>444 分钟</td></tr><tr><th scope="row">作者会话</th><td>7 次，384 分钟</td><td>12 次，407 分钟</td><td>8 次，291 分钟</td></tr><tr><th scope="row">全量行为对比</th><td>5 次，92 分钟</td><td>9 次，146 分钟</td><td>3 次，65 分钟</td></tr><tr><th scope="row">原版基线采集</th><td>5 次全部重采，99 分钟</td><td>11 次，其中 9 次复用，47 分钟</td><td>4 次，其中 2 次复用，45 分钟</td></tr><tr><th scope="row">澄清请求</th><td>1</td><td>11</td><td>2</td></tr><tr><th scope="row">CPU 检查首次全过</th><td>第 9.9 小时</td><td>第 19.3 小时</td><td>第 15.0 小时</td></tr><tr><th scope="row">体积（原版 862,476 tokens）</th><td>663,124（76.9%）</td><td>581,614（67.4%）</td><td>569,888（66.1%）</td></tr><tr><th scope="row">与上游逐行相同的行</th><td>83.8%</td><td>27.8%</td><td>27.9%</td></tr><tr><th scope="row">公开接口有文档字符串（原版 55.6%）</th><td>13.5%</td><td>0%</td><td>0%</td></tr><tr><th scope="row">Python 纯代码 tokens 变化（不含注释和文档字符串，含数据表）</th><td>−2.7%</td><td>−11.4%</td><td>−13.1%</td></tr><tr><th scope="row">作者输出 tokens</th><td>173 万</td><td>74 万</td><td>58 万</td></tr><tr><th scope="row">作者检索出的知识量</th><td>最多约 25 万 tokens</td><td>约 247 万 tokens</td><td>约 245 万 tokens</td></tr></tbody></table></div><ul>
+    <li>Codex 作者确实在重写，代码减得更多，但到 CPU 检查全过用了 15 到 19 小时。Fable 作者大体在默写上游，第一次全量对比就过了 153/160，收敛快，但代码几乎没变。</li>
+    <li>基线复用已经生效：复用的采集每次不到 1 分钟，重采一次约 20 分钟。</li>
+    <li>三次运行都没有用过并行的作者工作区。</li>
+  </ul>
+  <h3>本次运行与流程外的两次改写</h3>
+  <p class="note">A 是 goal 模式：Fable 5.2 看着源码原地改写，主会话带 22 个按范围并行的子代理和 6 个复查子代理。C 是单会话做的纯 Python 替代包。质量数据来自另一个会话做的三方对比。</p><div class="scroll-x"><table class="prose" style="min-width:720px"><thead><tr><th scope="col"></th><th scope="col">本次运行（B）</th><th scope="col">goal 模式（A）</th><th scope="col">单会话（C）</th></tr></thead><tbody><tr><th scope="row">墙钟</th><td>11 小时 28 分</td><td>6 小时</td><td>2 小时 17 分</td></tr><tr><th scope="row">模型费用</th><td>$177，另加监督会话约 $30</td><td>$703</td><td>$62</td></tr><tr><th scope="row">体积（三方共同范围）</th><td>72.4%</td><td>63.4%</td><td>76.4%</td></tr><tr><th scope="row">Python 纯代码 tokens（原版 415,468，不含数据表）</th><td>392,563（−5.5%）</td><td>366,640（−11.8%）</td><td>未统计</td></tr><tr><th scope="row">公开接口有文档字符串</th><td>13.6%</td><td>60.0%</td><td>未统计</td></tr><tr><th scope="row">盲评均分：可读性 / 文档 / 简洁 / 保真（满分 5，12 个文件）</th><td>2.67 / 1.42 / 2.17 / 4.58</td><td>4.25 / 4.08 / 4.00 / 4.33</td><td>未参加这一轮</td></tr><tr><th scope="row">盲评更愿意维护</th><td>0 / 12</td><td>12 / 12</td><td>三方盲评 11 个文件：A 第一 8 个，C 第一 3 个，B 全部第三</td></tr><tr><th scope="row">上游三套测试</th><td>与原版逐条相同</td><td>与原版逐条相同</td><td>与原版逐条相同</td></tr><tr><th scope="row">公开接口差异</th><td>190 处：新增 101 个名字，75 个消失，14 处签名或基类变化</td><td>103 处，多为无用的 import 和改为继承的转发方法</td><td>126 处</td></tr><tr><th scope="row">原生算子逐位对比（1,889 组输出）</th><td>239 组不同</td><td>全部相同</td><td>不适用，没有编译算子</td></tr><tr><th scope="row">评审读出的行为差异</th><td>5 处，高置信 3</td><td>17 处，高置信 7</td><td>13 处，高置信 8</td></tr><tr><th scope="row">范围</th><td>全部功能</td><td>全部功能</td><td>缺 4 个项目和 Caffe2 导出</td></tr></tbody></table></div><p class="note">A 的 34 万 tokens 减量里，约三分之一是删掉文档站、CI、docker 等非功能文件，约三分之一是把 LVIS 类别表写成差分形式，逻辑代码减了 4.9 万。nanolize 的体积口径本来就不计文档文件，所以两边的百分比不能直接相减。</p></section>
+<section id="diagnosis">
+  <h2>现状诊断</h2>
+  <p>下面的数字来自本次流程运行（Fable 作者，688 分钟，$177.17），另有说明的除外。</p>
+
+  <h3>时间花在哪里</h3>
+  <figure class="fig">
+    <div class="bars"><div class="bar-row"><div class="bar-name">作者会话（7 次）</div><div class="bar-track"><span class="bar" style="--w:1.0000" tabindex="0" data-tip="作者会话：383.8 分钟，55.8%。前 3 次写出完整代码树 221 分钟，后 4 次修复 162 分钟"></span><span class="bar-val">383.8 分 · 55.8%</span></div></div><div class="bar-row"><div class="bar-name">原版基线采集（5 次）</div><div class="bar-track"><span class="bar" style="--w:0.2587" tabindex="0" data-tip="原版基线采集：99.3 分钟，14.4%。每个候选都重采，每次约 20 分钟"></span><span class="bar-val">99.3 分 · 14.4%</span></div></div><div class="bar-row"><div class="bar-name">行为对比（7 次）</div><div class="bar-track"><span class="bar" style="--w:0.2522" tabindex="0" data-tip="行为对比：96.8 分钟，14.1%。全量一次约 18 分钟"></span><span class="bar-val">96.8 分 · 14.1%</span></div></div><div class="bar-row"><div class="bar-name">候选检查，含 GPU（7 次）</div><div class="bar-track"><span class="bar" style="--w:0.0719" tabindex="0" data-tip="候选检查：27.6 分钟，4.0%。GPU 检查靠反复调用来轮询"></span><span class="bar-val">27.6 分 · 4.0%</span></div></div><div class="bar-row"><div class="bar-name">操作之间的空隙</div><div class="bar-track"><span class="bar" style="--w:0.0620" tabindex="0" data-tip="操作之间的空隙：23.8 分钟，3.5%"></span><span class="bar-val">23.8 分 · 3.5%</span></div></div><div class="bar-row"><div class="bar-name">保存候选、测量、验收等小操作</div><div class="bar-track"><span class="bar" style="--w:0.0618" tabindex="0" data-tip="小操作：23.7 分钟，3.4%。每个约 1 分钟，基本是固定开销"></span><span class="bar-val">23.7 分 · 3.4%</span></div></div><div class="bar-row"><div class="bar-name">controller 决策（11 次）</div><div class="bar-track"><span class="bar" style="--w:0.0315" tabindex="0" data-tip="controller 决策：12.1 分钟，1.8%"></span><span class="bar-val">12.1 分 · 1.8%</span></div></div><div class="bar-row"><div class="bar-name">安装验收（4 次）</div><div class="bar-track"><span class="bar" style="--w:0.0294" tabindex="0" data-tip="安装验收：11.3 分钟，1.6%。每次新建虚拟环境"></span><span class="bar-val">11.3 分 · 1.6%</span></div></div><div class="bar-row"><div class="bar-name">环境准备（5 次）</div><div class="bar-track"><span class="bar" style="--w:0.0255" tabindex="0" data-tip="环境准备：9.8 分钟，1.4%。每次保存候选后重编原生扩展"></span><span class="bar-val">9.8 分 · 1.4%</span></div></div></div>
+    <figcaption>作者会话占 56%，验证（基线、行为对比、候选检查、安装、环境准备和测量）合计 254 分钟，占 37%。</figcaption>
+  </figure>
+  <ul>
+    <li>每个候选的验证周期约 50 分钟。最后一轮只改了一个头文件，作者用了 17 分钟，之后到交付又用了 63 分钟。</li>
+    <li>作者会话的时长基本由输出速度决定：四次完整会话每秒输出 80 到 111 个 tokens，每次输出 32 万到 51 万。</li>
+    <li>前 3 次会话共输出 122 万 tokens，产出一棵约 61 万 tokens 的代码树，其中约 84% 的行与上游相同。</li>
+    <li>第一次验证发生在开跑 3 小时 52 分之后，此前连续三次作者会话没有跑过任何检查。</li>
+  </ul>
+
+  <h3>费用花在哪里</h3>
+  <figure class="fig">
+    <div class="cmp">
+      <div class="cmp-row"><div class="bar-name">本次流程运行，$177</div><div class="segbar"><span class="blk s1" style="flex:44.3 0 0" tabindex="0" data-tip="本次流程运行，$177 · 输出：44.3%"><b>44%</b></span><span class="blk s2" style="flex:34.2 0 0" tabindex="0" data-tip="本次流程运行，$177 · 缓存写入：34.2%"><b>34%</b></span><span class="blk s3" style="flex:21.5 0 0" tabindex="0" data-tip="本次流程运行，$177 · 缓存读取：21.5%"><b>22%</b></span></div></div>
+      <div class="cmp-row"><div class="bar-name">goal 模式，$703</div><div class="segbar"><span class="blk s1" style="flex:38.5 0 0" tabindex="0" data-tip="goal 模式，$703 · 输出：38.5%"><b>38%</b></span><span class="blk s2" style="flex:26.1 0 0" tabindex="0" data-tip="goal 模式，$703 · 缓存写入：26.1%"><b>26%</b></span><span class="blk s3" style="flex:35.3 0 0" tabindex="0" data-tip="goal 模式，$703 · 缓存读取：35.3%"><b>35%</b></span></div></div>
+    </div>
+    <ul class="legend"><li><i class="sw s1"></i>输出</li><li><i class="sw s2"></i>缓存写入</li><li><i class="sw s3"></i>缓存读取</li></ul>
+    <figcaption>两边的构成相近：输出占四成左右，其余是把上下文写入和读回缓存。未缓存的输入可以忽略。</figcaption>
+  </figure>
+  <div class="scroll-x"><table class="num" style="min-width:420px"><thead><tr><th scope="col">类别</th><th scope="col">tokens</th><th scope="col">费用</th><th scope="col">占比</th></tr></thead><tbody><tr><th scope="row">输出</th><td>1,783,210</td><td>$78.46</td><td>44.3%</td></tr><tr><th scope="row">缓存写入（1 小时档）</th><td>3,447,148</td><td>$60.67</td><td>34.2%</td></tr><tr><th scope="row">缓存读取</th><td>172,836,180</td><td>$38.02</td><td>21.5%</td></tr><tr><th scope="row">未缓存输入</th><td>1,336</td><td>$0.01</td><td>0.0%</td></tr></tbody></table></div>
+  <ul>
+    <li>作者 7 次会话占 $167.94，controller 11 次决策只占 $9.23。</li>
+    <li>作者共 608 轮，每轮平均读回 28 万 tokens 的上下文，其中主要是会话自己先前写出的代码和命令输出，不是知识包。</li>
+    <li>goal 模式输出 621 万 tokens，是最终代码的 8.9 倍；它的 22 个范围子代理合计摄入约 907 万 tokens，是功能源码的 10.7 倍。它墙钟短是因为并行，不是因为省 tokens。</li>
+  </ul>
+
+  <h3>代码质量</h3>
+  <figure class="fig">
+    <h3>公开的类和函数里，有文档字符串的比例</h3>
+    <div class="meters"><div class="meter-row"><div class="meter-name">原版</div><div class="meter" tabindex="0" data-tip="原版：55.6%"><i style="width:55.6%"></i></div><div class="meter-fig"><span></span><b>55.6%</b></div></div><div class="meter-row"><div class="meter-name">goal 模式</div><div class="meter" tabindex="0" data-tip="goal 模式：60.0%"><i style="width:60.0%"></i></div><div class="meter-fig"><span></span><b>60.0%</b></div></div><div class="meter-row"><div class="meter-name">流程，Fable 作者</div><div class="meter" tabindex="0" data-tip="流程，Fable 作者：13.5%"><i style="width:13.5%"></i></div><div class="meter-fig"><span></span><b>13.5%</b></div></div><div class="meter-row"><div class="meter-name">Codex 作者，基线复用分支</div><div class="meter" tabindex="0" data-tip="Codex 作者，基线复用分支：0.0%"><i style="width:0.0%"></i></div><div class="meter-fig"><span></span><b>0.0%</b></div></div><div class="meter-row"><div class="meter-name">Codex 作者，高效验证分支</div><div class="meter" tabindex="0" data-tip="Codex 作者，高效验证分支：0.0%"><i style="width:0.0%"></i></div><div class="meter-fig"><span></span><b>0.0%</b></div></div></div>
+    <figcaption>同一套流程下，两种作者模型都把文档删掉了；goal 模式按“保留简短文档字符串”的规则做，覆盖率反而略高于原版。goal 模式的数字来自另一个会话的统计脚本，同一脚本下原版是 55.5%。</figcaption>
+  </figure>
+  <ol>
+    <li><strong>减量主要来自删文档。</strong>本次运行减掉的 199,352 tokens 里，文档字符串占 52%，注释占 21%，配置文件占 11%，代码本身只占 16%。不含注释的源码只减了 5.1%。</li>
+    <li><strong>盲评把“原版删掉文档”的版本排在最后。</strong>评审对本次运行的典型评语是“原版删掉了每一个文档字符串和注释，结构没动”。</li>
+    <li><strong>Fable 作者在默写上游，而且默写的是旧版本。</strong>83.8% 的行与上游相同；它写出 66 万 tokens 的代码，却只查阅了知识包的约 11%。旋转 IoU 的主机分支用了一个不满足严格弱序的 <code>std::sort</code> 比较器，这是上游旧版本的写法，会触发未定义行为。这个问题没有任何检查覆盖，是 owner 手工对拍才发现的。</li>
+    <li><strong>检查全过不等于行为一致。</strong>交付后的逐位对比发现 239 组原生算子输出与原版不同，其中 16 组是原版报错而候选正常返回。公开接口有 190 处差异，75 个名字消失。</li>
+    <li><strong>数据表占了四分之一的体积，却没人管。</strong>LVIS 类别表在交付物里占 163,645 tokens，比原版还多 3,302。</li>
+    <li><strong>交付物里留着工作笔记，报告生成失败。</strong><code>PROGRESS.md</code> 进了交付分支；报告站点在最后一步生成失败。</li>
+  </ol>
+
+  <h3>知识包</h3>
+  <figure class="fig">
+    <h3>知识包的 2,346,328 tokens 由什么组成</h3>
+    <div class="segbar" role="img" aria-label="知识包的组成：数据类契约 56.8%，接口和行为类契约 33.4%，索引、关系和证据 9.8%">
+      <span class="blk s1" style="flex:56.8 0 0" tabindex="0" data-tip="数据类契约：1,333,326 tokens，56.8%"><b>57%</b></span>
+      <span class="blk s2" style="flex:33.4 0 0" tabindex="0" data-tip="接口、行为、兼容性等契约：783,338 tokens，33.4%"><b>33%</b></span>
+      <span class="blk s3" style="flex:9.8 0 0" tabindex="0" data-tip="索引、关系、证据等：229,664 tokens，9.8%"><b>10%</b></span>
+    </div>
+    <ul class="legend"><li><i class="sw s1"></i>数据类契约：配置、元数据、类别表，每个参数路径一条</li><li><i class="sw s2"></i>接口、行为、兼容性等契约</li><li><i class="sw s3"></i>索引、关系、证据</li></ul>
+    <figcaption>光“模型配置”一个功能就占 837,397 tokens，而原版配置文件总共约 6.4 万；功能的中位数只有 7,840。</figcaption>
+  </figure>
+  <figure class="fig">
+    <h3>作者实际检索出多少知识（万 tokens）</h3>
+    <div class="bars"><div class="bar-row"><div class="bar-name">知识包本身的大小</div><div class="bar-track"><span class="bar" style="--w:0.9514" tabindex="0" data-tip="知识包：2,346,328 tokens"></span><span class="bar-val">235 万</span></div></div><div class="bar-row"><div class="bar-name">Fable 作者（上限）</div><div class="bar-track"><span class="bar" style="--w:0.1012" tabindex="0" data-tip="Fable 作者检索出的知识量：最多约 25 万 tokens，约占整包 11%"></span><span class="bar-val">25 万</span></div></div><div class="bar-row"><div class="bar-name">Codex 作者，基线复用分支</div><div class="bar-track"><span class="bar" style="--w:1.0000" tabindex="0" data-tip="Codex 作者（基线复用分支）：约 247 万 tokens"></span><span class="bar-val">247 万</span></div></div><div class="bar-row"><div class="bar-name">Codex 作者，高效验证分支</div><div class="bar-track"><span class="bar" style="--w:0.9919" tabindex="0" data-tip="Codex 作者（高效验证分支）：约 245 万 tokens"></span><span class="bar-val">245 万</span></div></div></div>
+    <figcaption>知识包不进提示词，放在工作区里由作者按需读取。按检索命令的输出统计，是上限：同一条契约可能被读到多次，Codex 也可能在送入模型前截断输出。</figcaption>
+  </figure>
+  <ul>
+    <li>提示词要求先读 <code>index.json</code>，那是 10 万 tokens 的 ID 列表。</li>
+    <li>契约里 <code>id</code>、<code>evidence_ids</code>、<code>capabilities</code> 三个标识符字段占 22%，作者用不上。</li>
+    <li><code>nanolize knowledge-query</code> 在三次运行里一次都没有被调用。它单次最多返回 100 条、没有分页。作者每次会话都自己写解析脚本。</li>
+    <li>整包原样拷进每个工作区，没有按会话裁剪，也没有读取记录。</li>
+  </ul>
+
+  <h3>根因：对应到分支代码</h3>
+  <p class="note">行号指提交 55ceb83 的 <code>src/nanolize/</code>。“后继分支”指最新的 <code>controller-efficient-verification</code>（7e1b722）。</p>
+  <div class="scroll-x"><table class="prose" style="min-width:980px"><thead><tr><th scope="col">问题</th><th scope="col">位置</th><th scope="col">机制</th><th scope="col">后继分支</th><th scope="col">建议</th></tr></thead><tbody><tr><th scope="row">controller 和作者看不到失败原因</th><td><code>controller_history.py:27-49</code>，<code>rewrite.py:250-279</code></td><td>结果只放行状态和退出码等字段；反馈只给分类，不给异常、断言和期望值。唯一的细节通道是 owner 手写的诊断</td><td>未改</td><td><a href="#A1">A1</a></td></tr><tr><th scope="row">检查串行执行</th><td><code>verification.py:260-281</code></td><td>一个循环逐个跑子进程，没有并发，也没有结果缓存</td><td>未改；新增了“先跑受影响的检查”的调度</td><td><a href="#B1">B1</a></td></tr><tr><th scope="row">基线每个候选重采</th><td><code>controller.py:299-318</code>，<code>rewrite.py:309-316</code></td><td>保存候选会清掉编译产物，于是要重新准备环境；而准备环境一调用就把环境版本加一，原版基线随之作废</td><td>已改（86af4b1）</td><td><a href="#B2">B2</a></td></tr><tr><th scope="row">每个操作约 1 分钟固定开销</th><td><code>controller.py:906,910</code>，<code>execution.py:272-287</code></td><td>每次工具调用都对原仓库做 3 遍全量快照、AST 分析和 token 计数，并重新哈希全部产物</td><td>未改</td><td><a href="#B4">B4</a></td></tr><tr><th scope="row">单个检查最长 300 秒</th><td><code>verification.py:74-85</code></td><td>上限写死；GPU 检查只能提交作业后用退出码表示排队中，由 controller 轮询</td><td>未改</td><td><a href="#B5">B5</a></td></tr><tr><th scope="row">owner 命令被锁挡住</th><td><code>execution.py:150-160</code>，<code>controller.py:896-899</code></td><td>操作锁在整个作者会话期间持有</td><td>未改</td><td><a href="#G2">G2</a>、<a href="#B6">B6</a></td></tr><tr><th scope="row">作者串行，每次拿到全量</th><td><code>controller.py:41,82</code>，<code>controller_workspaces.py:67-190</code></td><td>作者调用只有角色和自由文本；并行工作区已实现但没用过</td><td>部分：可传功能和问题 ID</td><td><a href="#C1">C1</a></td></tr><tr><th scope="row">策略要求删文档</th><td><code>prompts/rewrite/policy.json:34</code></td><td>“Aggressively remove unnecessary documentation, comments and explanatory boilerplate.”</td><td>未改</td><td><a href="#E1">E1</a></td></tr><tr><th scope="row">度量把注释算进体积</th><td><code>code_size.py:178</code></td><td>对整个文件文本计 token，不区分代码、注释和数据表</td><td>未改</td><td><a href="#E1">E1</a>、<a href="#E7">E7</a></td></tr><tr><th scope="row">验收不看质量</th><td><code>controller.py:543-580</code></td><td>条件只有检查通过、覆盖就绪、安装通过等；没有体积、相似度或可读性条件</td><td>未改</td><td><a href="#E6">E6</a></td></tr><tr><th scope="row">比较器只有两种</th><td><code>capability_verification.py:395-410</code></td><td>只比退出码，或比输出的 SHA-256</td><td>未改</td><td><a href="#E3">E3</a></td></tr><tr><th scope="row">没有原生代码的指引</th><td><code>prompts/rewrite/*.md</code></td><td>提示词里没有关于 C++/CUDA 或数值算法的任何要求</td><td>未改</td><td><a href="#E4">E4</a></td></tr><tr><th scope="row">不看源码只是约定</th><td><code>rewrite.py:3-4,228</code>，<code>modes.py:3</code></td><td>代码自己写明这不是操作系统级隔离；没有与原版的相似度检查；也没有可以看源码的模式</td><td>未改</td><td><a href="#E6">E6</a>、<a href="#F1">F1</a></td></tr><tr><th scope="row">整包知识拷进每个工作区</th><td><code>rewrite.py</code> 的 <code>make_workspace</code>，<code>knowledge.py</code></td><td>六个固定文件原样写入；查询函数单次最多 100 条、没有分页</td><td>未改</td><td><a href="#D1">D1</a>、<a href="#D4">D4</a></td></tr><tr><th scope="row">报告映射到交付才校验</th><td><code>controller.py:421-422</code>，<code>report_site.py:117-118</code></td><td>作者写的映射在保存候选时原样拷贝；交付时只要有一个路径不是源码文件就整体失败</td><td>未改</td><td><a href="#G5">G5</a></td></tr><tr><th scope="row">没有成本上限，也看不到用量</th><td><code>execution.py:365-377</code>，<code>controller.py:393,1023</code></td><td>作者调用数默认不封顶，决策轮数无上限；回执里的用量写死为 unavailable</td><td>部分：guide 要求最小化时间和 tokens，并提供实测耗时</td><td><a href="#G1">G1</a>、<a href="#G3">G3</a></td></tr></tbody></table></div>
+</section>
+
+<section id="compare">
+  <h2>与 goal 模式逐环节对比</h2>
+  <p>两边最根本的差别有三个：goal 模式先花约两小时造好对拍工具再动手；作者自己能验证；编排者能看到差异，并且边等边干。流程的优势是成本、隔离和可审计。goal 模式的过程是从它的会话日志、任务书、规则文件和脚本还原的。</p>
+  <div class="scroll-x"><table class="prose" style="min-width:820px"><thead><tr><th scope="col">环节</th><th scope="col">nanolize 流程</th><th scope="col">goal 模式</th></tr></thead><tbody><tr><th scope="row">开工前</th><td>发现功能图、选范围、编译知识包；检查由 owner 提供；基线采一次</td><td>主会话先写对拍工具（接口清单、配置导出、命令行帮助、模型指纹、测试逐条对比），把原版跑两遍确认结果稳定，并列出原版本来就失败的测试及原因</td></tr><tr><th scope="row">拆分</th><td>controller 用自由文本给作者划范围；并行工作区已实现但没用过</td><td>按子模块体积切成 22 个文件不相交的范围，每个范围一个已编好扩展的 git worktree</td></tr><tr><th scope="row">作者拿到什么</th><td>通用提示词加知识包（235 万 tokens 的文字和数据契约）</td><td>2,300 到 4,900 字符的任务书、7.6 KB 的公共规则、自己范围的源码</td></tr><tr><th scope="row">行为参考</th><td>160 个检查，结果只回退出码</td><td>原版的参考输出 19 MB（接口清单、配置解析结果、模型指纹、命令行帮助）。子代理不读它，只看对比命令给出的差异</td></tr><tr><th scope="row">作者怎么验证</th><td>不能跑验证方的检查，等会话结束后由 controller 跑，约 50 分钟一轮</td><td>每改一个文件跑定向测试，收尾跑全套对拍，修完回归再提交</td></tr><tr><th scope="row">改写遍数</th><td>实现一次，之后只修复。这几次运行 owner 把优化轮数设成了 0</td><td>每个范围两遍，第二遍专攻最大的文件；主会话再对最大的 6 个文件派第三轮</td></tr><tr><th scope="row">编排者</th><td>controller 不看源码，只看退出码；同一时刻只能有一个操作在跑</td><td>主会话能看到一切；子代理工作时它继续补工具、逐个合并已完成的范围</td></tr><tr><th scope="row">合并</th><td>每个候选是整棵树的快照，7 个候选串行</td><td>26 次合并；每次合并后立刻查 import 解析、配置、命令行帮助；跨范围的小问题主会话自己修</td></tr><tr><th scope="row">失败反馈</th><td>退出码；细节靠 owner 手写诊断</td><td>对比命令直接指出哪个测试、哪个配置键、哪个接口不一样</td></tr><tr><th scope="row">作者交回什么</th><td>代码，加一份功能到文件的映射</td><td>五段式报告：体积前后和实际跑过的检查、删了什么、主要简化、没把握的地方、范围外需要的改动</td></tr><tr><th scope="row">实际摄入量</th><td>Fable 作者 75 万 tokens；两个 Codex 运行 461 万和 296 万</td><td>22 个范围子代理合计约 907 万，是功能源码（84.5 万）的 10.7 倍</td></tr><tr><th scope="row">交付物</th><td>7 个提交，消息是同一句话</td><td>84 个提交，按范围和遍数；README 列出与上游的差异</td></tr><tr><th scope="row">计算资源</th><td>GPU 检查由 owner 脚本提交作业，controller 轮询</td><td>一个常驻的 2 卡节点，所有子代理通过排队脚本共用，自动续期</td></tr><tr><th scope="row">隔离与审计</th><td>测试归验证方，证据绑定候选哈希，操作全程留痕</td><td>靠规则约束（“不许改测试”），没有独立审计</td></tr><tr><th scope="row">成本</th><td>$177，11.5 小时</td><td>$703，6 小时</td></tr></tbody></table></div>
+<figure class="fig diagram">
+  <div class="scroll-x">
+  <svg viewBox="0 0 940 392" role="img" aria-label="上半部分是现在的一轮：作者会话、保存候选、重采基线、行为对比、GPU 与安装检查、只回退出码，再经 owner 手写诊断回到作者。下半部分是建议的一轮：按范围拆分、并行作者各自跑范围检查、增量合并加集成探针、并行的全量对比、验收，失败摘要自动回传给作者。">
+    <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+    <g font-size="13" fill="currentColor">
+      <text x="20" y="22" font-weight="600">现在的一轮</text>
+      <text x="20" y="226" font-weight="600">建议的一轮</text>
+    </g>
+    <g fill="none" stroke="currentColor" stroke-opacity=".45">
+      <rect x="20" y="36" width="130" height="68" rx="8"/><rect x="174" y="36" width="130" height="68" rx="8"/><rect x="328" y="36" width="130" height="68" rx="8"/>
+      <rect x="482" y="36" width="130" height="68" rx="8"/><rect x="636" y="36" width="130" height="68" rx="8"/><rect x="790" y="36" width="130" height="68" rx="8"/>
+      <rect x="20" y="240" width="160" height="68" rx="8"/><rect x="780" y="240" width="140" height="68" rx="8"/>
+    </g>
+    <g fill="none" stroke="var(--accent)" stroke-width="1.8">
+      <rect x="204" y="240" width="168" height="68" rx="8"/><rect x="396" y="240" width="168" height="68" rx="8"/><rect x="588" y="240" width="168" height="68" rx="8"/>
+    </g>
+    <g stroke="currentColor" stroke-opacity=".7" fill="none" marker-end="url(#arr)" color="var(--ink-2)">
+      <line x1="150" y1="70" x2="172" y2="70"/><line x1="304" y1="70" x2="326" y2="70"/><line x1="458" y1="70" x2="480" y2="70"/><line x1="612" y1="70" x2="634" y2="70"/><line x1="766" y1="70" x2="788" y2="70"/>
+      <polyline points="855,104 855,140 85,140 85,106"/>
+      <line x1="180" y1="274" x2="202" y2="274"/><line x1="372" y1="274" x2="394" y2="274"/><line x1="564" y1="274" x2="586" y2="274"/><line x1="756" y1="274" x2="778" y2="274"/>
+      <polyline points="672,308 672,344 288,344 288,310"/>
+    </g>
+    <g fill="currentColor" text-anchor="middle" font-size="13" font-weight="600">
+      <text x="85" y="60">作者会话</text><text x="239" y="60">保存候选</text><text x="393" y="60">重采原版基线</text><text x="547" y="60">行为对比</text><text x="701" y="60">GPU 与安装检查</text><text x="855" y="60">只回退出码</text>
+      <text x="100" y="264">按范围拆分</text><text x="288" y="264">并行作者 × N</text><text x="480" y="264">增量合并</text><text x="672" y="264">全量对比</text><text x="850" y="264">验收与交付</text>
+    </g>
+    <g fill="currentColor" fill-opacity=".75" text-anchor="middle" font-size="12">
+      <text x="85" y="78">整个仓库，约 70 分钟</text><text x="85" y="94">期间不跑检查</text>
+      <text x="239" y="78">重编原生扩展</text><text x="239" y="94">约 3 分钟</text>
+      <text x="393" y="78">每个候选一次</text><text x="393" y="94">约 20 分钟</text>
+      <text x="547" y="78">160 个检查串行</text><text x="547" y="94">约 18 分钟</text>
+      <text x="701" y="78">反复调用来轮询</text><text x="701" y="94">约 8 分钟起</text>
+      <text x="855" y="78">看不到失败原因</text>
+      <text x="470" y="158">owner 手写诊断后才能修；两个 Codex 运行为此各空等 6 到 7 小时</text>
+      <text x="100" y="282">文件不相交</text><text x="100" y="298">每个范围一份任务书</text>
+      <text x="288" y="282">改一个文件，跑本范围检查</text><text x="288" y="298">看差异，再改</text>
+      <text x="480" y="282">合并后跑集成探针</text><text x="480" y="298">几秒到几分钟</text>
+      <text x="672" y="282">并行执行，基线复用</text><text x="672" y="298">几分钟</text>
+      <text x="850" y="282">质量信号进报告</text>
+      <text x="480" y="362">失败摘要自动回传，不经过 owner</text>
+    </g>
+  </svg>
+  </div>
+  <figcaption>上面是现在的一轮，约 50 分钟，失败时还要等 owner。下面是建议的一轮：蓝色边框是新增或改动的环节，时间是估算。</figcaption>
+</figure>
+
+</section>
+<section id="recs"><h2>修改建议</h2><p>共 33 条，分七组。P0 的 8 条建议优先做：<a href="#A1">A1</a>、<a href="#A2">A2</a>、<a href="#B1">B1</a>、<a href="#B2">B2</a>、<a href="#C1">C1</a>、<a href="#D1">D1</a>、<a href="#E1">E1</a>、<a href="#E2">E2</a>。“来源”一栏说明这条建议是从流程自己的数据推出来的，还是从 goal 模式的做法借来的。</p><div class="scroll-x"><table class="matrix" style="min-width:680px"><thead><tr><th scope="col">编号</th><th scope="col" class="txt">修改点</th><th scope="col">优先级</th><th scope="col">时间</th><th scope="col">tokens</th><th scope="col">质量</th><th scope="col" class="txt">来源与现状</th></tr></thead><tbody><tr class="grp"><th scope="rowgroup" colspan="7">A · 反馈与内循环</th></tr><tr><th scope="row"><a href="#A1">A1</a></th><td class="txt"><a href="#A1">自动生成脱敏的失败摘要</a></td><td><span class="tag p0">P0</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#A2">A2</a></th><td class="txt"><a href="#A2">作者可调用的范围检查</a></td><td><span class="tag p0">P0</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式；调度逻辑已有</td></tr><tr><th scope="row"><a href="#A3">A3</a></th><td class="txt"><a href="#A3">作者报告结构化</a></td><td><span class="tag p1">P1</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式</td></tr><tr class="grp"><th scope="rowgroup" colspan="7">B · 验证速度</th></tr><tr><th scope="row"><a href="#B1">B1</a></th><td class="txt"><a href="#B1">并行执行检查，并缓存结果</a></td><td><span class="tag p0">P0</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#B2">B2</a></th><td class="txt"><a href="#B2">合入基线复用，查清中途重采的原因</a></td><td><span class="tag p0">P0</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td></td><td class="txt">来自流程数据；后继分支已实现</td></tr><tr><th scope="row"><a href="#B3">B3</a></th><td class="txt"><a href="#B3">基线自检</a></td><td><span class="tag p1">P1</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式</td></tr><tr><th scope="row"><a href="#B4">B4</a></th><td class="txt"><a href="#B4">去掉每个操作的固定开销</a></td><td><span class="tag p1">P1</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#B5">B5</a></th><td class="txt"><a href="#B5">长时间和异步的检查，常驻计算节点执行器</a></td><td><span class="tag p1">P1</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td></td><td class="txt">两者都支持</td></tr><tr><th scope="row"><a href="#B6">B6</a></th><td class="txt"><a href="#B6">验证与作者会话并发</a></td><td><span class="tag p1">P1</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td></td><td class="txt">借鉴 goal 模式</td></tr><tr><th scope="row"><a href="#B7">B7</a></th><td class="txt"><a href="#B7">候选之间保留编译产物</a></td><td><span class="tag p2">P2</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td></td><td class="txt">借鉴 goal 模式</td></tr><tr class="grp"><th scope="rowgroup" colspan="7">C · 拆分与并行</th></tr><tr><th scope="row"><a href="#C1">C1</a></th><td class="txt"><a href="#C1">默认按文件不相交的范围并行</a></td><td><span class="tag p0">P0</span></td><td><span class="dot" aria-label="是">●</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td class="txt">两者都支持；并行工作区已有，未使用</td></tr><tr><th scope="row"><a href="#C2">C2</a></th><td class="txt"><a href="#C2">增量合并，合并后马上跑集成探针</a></td><td><span class="tag p1">P1</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式</td></tr><tr><th scope="row"><a href="#C3">C3</a></th><td class="txt"><a href="#C3">把长会话拆成按范围的短会话</a></td><td><span class="tag p1">P1</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td></td><td class="txt">来自流程数据</td></tr><tr class="grp"><th scope="rowgroup" colspan="7">D · 知识包</th></tr><tr><th scope="row"><a href="#D1">D1</a></th><td class="txt"><a href="#D1">分层的作者视图，顶层是任务书</a></td><td><span class="tag p0">P0</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">两者都支持</td></tr><tr><th scope="row"><a href="#D2">D2</a></th><td class="txt"><a href="#D2">声明式数据走资源文件，并以对拍为主</a></td><td><span class="tag p1">P1</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">两者都支持</td></tr><tr><th scope="row"><a href="#D3">D3</a></th><td class="txt"><a href="#D3">接口契约改成机器生成的接口清单</a></td><td><span class="tag p1">P1</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式</td></tr><tr><th scope="row"><a href="#D4">D4</a></th><td class="txt"><a href="#D4">工作区自带检索脚本，并记账</a></td><td><span class="tag p1">P1</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#D5">D5</a></th><td class="txt"><a href="#D5">体积护栏</a></td><td><span class="tag p2">P2</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td></td><td class="txt">来自流程数据</td></tr><tr class="grp"><th scope="rowgroup" colspan="7">E · 代码质量</th></tr><tr><th scope="row"><a href="#E1">E1</a></th><td class="txt"><a href="#E1">改写文档策略和体积度量</a></td><td><span class="tag p0">P0</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">两者都支持</td></tr><tr><th scope="row"><a href="#E2">E2</a></th><td class="txt"><a href="#E2">把通用的差分探针加进验收</a></td><td><span class="tag p0">P0</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式</td></tr><tr><th scope="row"><a href="#E3">E3</a></th><td class="txt"><a href="#E3">增加比较器类型</a></td><td><span class="tag p1">P1</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#E4">E4</a></th><td class="txt"><a href="#E4">原生和数值内核默认原样保留</a></td><td><span class="tag p1">P1</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">两者都支持</td></tr><tr><th scope="row"><a href="#E5">E5</a></th><td class="txt"><a href="#E5">把行为冻结清单写进契约</a></td><td><span class="tag p1">P1</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式</td></tr><tr><th scope="row"><a href="#E6">E6</a></th><td class="txt"><a href="#E6">把质量信号交给 controller 和交付报告</a></td><td><span class="tag p1">P1</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">两者都支持</td></tr><tr><th scope="row"><a href="#E7">E7</a></th><td class="txt"><a href="#E7">源码里的数据表单独处理</a></td><td><span class="tag p1">P1</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">两者都支持</td></tr><tr><th scope="row"><a href="#E8">E8</a></th><td class="txt"><a href="#E8">两遍制，加定向的第三轮</a></td><td><span class="tag p2">P2</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式</td></tr><tr class="grp"><th scope="rowgroup" colspan="7">F · 架构选择</th></tr><tr><th scope="row"><a href="#F1">F1</a></th><td class="txt"><a href="#F1">增加“看源码、原地改写”的作者模式</a></td><td><span class="tag p1">P1</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式</td></tr><tr class="grp"><th scope="rowgroup" colspan="7">G · 运行与交付</th></tr><tr><th scope="row"><a href="#G1">G1</a></th><td class="txt"><a href="#G1">预算上限和启动自检</a></td><td><span class="tag p1">P1</span></td><td><span class="dot" aria-label="是">●</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#G2">G2</a></th><td class="txt"><a href="#G2">owner 的输入走队列，不等锁</a></td><td><span class="tag p1">P1</span></td><td><span class="dot" aria-label="是">●</span></td><td></td><td></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#G3">G3</a></th><td class="txt"><a href="#G3">回执里记录真实用量</a></td><td><span class="tag p1">P1</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#G4">G4</a></th><td class="txt"><a href="#G4">无人值守的会话改用 5 分钟档的缓存</a></td><td><span class="tag p2">P2</span></td><td></td><td><span class="dot" aria-label="是">●</span></td><td></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#G5">G5</a></th><td class="txt"><a href="#G5">交付前清理和校验</a></td><td><span class="tag p1">P1</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">来自流程数据</td></tr><tr><th scope="row"><a href="#G6">G6</a></th><td class="txt"><a href="#G6">提交粒度和偏差清单</a></td><td><span class="tag p2">P2</span></td><td></td><td></td><td><span class="dot" aria-label="是">●</span></td><td class="txt">借鉴 goal 模式</td></tr></tbody></table></div><div class="group"><h3 id="gA">A · 反馈与内循环</h3><p class="note">让 controller 和作者知道哪里错了，并让作者自己能验证。两个 Codex 运行卡住的直接原因在这一组。</p><article class="rec" id="A1"><h4><span class="rid">A1</span>自动生成脱敏的失败摘要</h4><div class="tags"><span class="tag p0">P0 · 优先做</span><span class="tag">时间</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>检查失败时由 harness 提取并写进反馈：测试 ID、异常类型和消息、落在候选自己文件里的调用栈、断言类别（形状不符、数值不符、缺属性、import 失败）、数值差的量级。测试源码和期望值字面量继续隐藏。</dd><dt>改哪里</dt><dd><code>controller_history.py:27-49</code>（结果字段白名单），<code>rewrite.py:250-279</code>（反馈只给分类）</dd><dt>依据</dt><dd>两个 Codex 运行的 13 个澄清请求里有 11 个是在向 owner 要失败诊断，分别空等 369 和 444 分钟。本次运行也靠 owner 手写了 2 份诊断。候选自己的调用栈不泄露原版源码。</dd><dt>预期与注意</dt><dd>无人值守的运行不再为诊断停下；盲修的轮数减少。</dd></dl></article><article class="rec" id="A2"><h4><span class="rid">A2</span>作者可调用的范围检查</h4><div class="tags"><span class="tag p0">P0 · 优先做</span><span class="tag">时间</span><span class="tag">质量</span><span class="tag src">借鉴 goal 模式</span><span class="tag st">调度逻辑已有</span></div><dl><dt>改什么</dt><dd>作者在会话内对自己的草稿跑本范围已授权的检查，拿到 A1 的摘要。全量验收仍由 controller 在会话外做，证据规则不变；检查程序本身不暴露，只暴露结果。</dd><dt>改哪里</dt><dd><code>controller_scheduling.py</code> 已能按功能算出受影响的检查，缺的是让作者触发的入口；执行走 <code>verification.py</code> 的单个检查函数</dd><dt>依据</dt><dd>goal 模式的子代理每改一个文件就跑定向测试。流程的作者写完整个会话才由 controller 验证，一轮约 50 分钟；本次运行开跑 3 小时 52 分后才第一次验证。</dd><dt>预期与注意</dt><dd>这是两种做法差距最大的地方，也是最值得借的一条。</dd></dl></article><article class="rec" id="A3"><h4><span class="rid">A3</span>作者报告结构化</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">质量</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>作者交回时增加两个字段：改了逻辑但没有检查覆盖的地方，和范围外需要的改动。controller 对前者补探针或加检查，对后者转给对应范围。</dd><dt>改哪里</dt><dd><code>prompts/rewrite/runner.md</code>，<code>controller_feedback.py</code></dd><dt>依据</dt><dd>goal 模式的子代理交回五段式报告：体积前后和实际跑过的检查、删了什么、主要简化、没把握的地方、范围外需要的改动。流程的作者只交回代码和一份功能到文件的映射。</dd><dt>预期与注意</dt><dd>把“检查没覆盖到”的风险显式化。</dd></dl></article></div><div class="group"><h3 id="gB">B · 验证速度</h3><p class="note">本次运行 688 分钟里有 254 分钟是验证，改一个文件也要等约 50 分钟。</p><article class="rec" id="B1"><h4><span class="rid">B1</span>并行执行检查，并缓存结果</h4><div class="tags"><span class="tag p0">P0 · 优先做</span><span class="tag">时间</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>把逐个执行改成进程池，GPU 检查单独排队。结果按“检查定义 + 候选树摘要 + 环境指纹”缓存，恢复或选定一个字节相同的候选时不必重跑。</dd><dt>改哪里</dt><dd><code>verification.py:260-281</code>（一个 for 循环逐个跑子进程）；证据绑定在 <code>controller.py:188-197</code></dd><dt>依据</dt><dd>160 个检查串行一遍 18 到 20 分钟，机器有 64 核。现在恢复候选会生成新 ID，旧证据全部失效。</dd><dt>预期与注意</dt><dd>全量对比降到几分钟（假设检查之间不争抢资源）；本次运行可省 70 到 85 分钟。</dd></dl></article><article class="rec" id="B2"><h4><span class="rid">B2</span>合入基线复用，查清中途重采的原因</h4><div class="tags"><span class="tag p0">P0 · 优先做</span><span class="tag">时间</span><span class="tag src">来自流程数据</span><span class="tag st">后继分支已实现</span></div><dl><dt>改什么</dt><dd>原版基线在指纹不变时复用。还需确认 owner 的答复是否会让契约版本变化，从而触发重采。</dd><dt>改哪里</dt><dd>后继分支提交 86af4b1 新增的基线复用模块；55ceb83 上的问题在 <code>controller.py:299-318</code></dd><dt>依据</dt><dd>本次运行 5 次全部重采，共 99 分钟。两个 Codex 运行里复用的采集每次不到 1 分钟，但都在 owner 答复之后又完整重采了一次。</dd><dt>预期与注意</dt><dd>本次运行可省 79 分钟。</dd></dl></article><article class="rec" id="B3"><h4><span class="rid">B3</span>基线自检</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">质量</span><span class="tag">时间</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>采集基线时把每个检查跑两遍：两遍不一致的标为不稳定，单独处理或设容差；原版本来就失败的记下原因，作为预期失败写进作者的任务书。</dd><dt>改哪里</dt><dd><code>capability_verification.py:190</code> 一带，<code>verification.py:698-706</code></dd><dt>依据</dt><dd>goal 模式把原版的模型指纹录了两遍互相比较，并逐个列出基线失败和跳过的原因。流程的基线只跑一遍，原版有一个检查失败就让整次对比变成 unverified。</dd><dt>预期与注意</dt><dd>减少由不稳定检查引起的误判和返工。</dd></dl></article><article class="rec" id="B4"><h4><span class="rid">B4</span>去掉每个操作的固定开销</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">时间</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>完整性校验用的全量快照按（路径、修改时间、大小）缓存，或者每轮决策只做一次。</dd><dt>改哪里</dt><dd><code>controller.py:906,910</code>，<code>execution.py:272-287</code></dd><dt>依据</dt><dd>每次工具调用都对原仓库做 3 遍全量快照、AST 分析和 token 计数，并重新哈希全部产物。保存候选、测量、验收这些本该瞬时完成的操作每个约 1 分钟。</dd><dt>预期与注意</dt><dd>本次运行可省 25 到 40 分钟。</dd></dl></article><article class="rec" id="B5"><h4><span class="rid">B5</span>长时间和异步的检查，常驻计算节点执行器</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">时间</span><span class="tag src">两者都支持</span></div><dl><dt>改什么</dt><dd>放开单个检查 300 秒的上限，增加“已提交、排队中”状态，由 harness 等待。更进一步：检查排队到一个已申请、自动续期的节点上执行，像本地命令一样用。</dd><dt>改哪里</dt><dd><code>verification.py:74-85</code>（上限写死），<code>execution_backends.py</code>（已有 slurm 后端）</dd><dt>依据</dt><dd>本次运行为 GPU 检查调了 7 次 <code>run_checks</code> 来轮询；Codex 运行里 controller 把表示排队的退出码 75 和表示失败的 1 弄混，发了一次更正。goal 模式的 22 个子代理通过排队脚本共用一个 2 卡节点。</dd><dt>预期与注意</dt><dd>GPU 检查不再占用 controller 的决策轮次。</dd></dl></article><article class="rec" id="B6"><h4><span class="rid">B6</span>验证与作者会话并发</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">时间</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>把一把全局操作锁细化到工作区或候选。已保存候选的验证可以和其他范围的作者会话同时进行。</dd><dt>改哪里</dt><dd><code>controller.py:896-899</code>，<code>execution.py:150-160</code></dd><dt>依据</dt><dd>goal 模式的主会话在子代理工作时，后台跑着已合并分支的全量验证。流程里所有操作共用一把锁，后台模式也要拿同一把锁，不能并行。</dd><dt>预期与注意</dt><dd>配合 C1、C2 才有意义。</dd></dl></article><article class="rec" id="B7"><h4><span class="rid">B7</span>候选之间保留编译产物</h4><div class="tags"><span class="tag p2">P2 · 可选</span><span class="tag">时间</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>原生源码没有变化时复用上一个候选的编译结果。</dd><dt>改哪里</dt><dd><code>rewrite.py:309-316</code>（保存候选时清空工作树）</dd><dt>依据</dt><dd>每个候选都要重编原生扩展（5 次环境准备共 9.8 分钟）。goal 模式给每个范围预置了已编好扩展的工作树。</dd><dt>预期与注意</dt><dd>每个候选省约 2 分钟。</dd></dl></article></div><div class="group"><h3 id="gC">C · 拆分与并行</h3><p class="note">初次实现是流程里最长的一段：三次作者会话串行 221 分钟。</p><article class="rec" id="C1"><h4><span class="rid">C1</span>默认按文件不相交的范围并行</h4><div class="tags"><span class="tag p0">P0 · 优先做</span><span class="tag">时间</span><span class="tag">tokens</span><span class="tag src">两者都支持</span><span class="tag st">并行工作区已有，未使用</span></div><dl><dt>改什么</dt><dd>用功能图和各功能的源码体积生成划分。每个范围一个工作区，预置编好的扩展，拿到 D1 的任务书；完成后按文件合并。</dd><dt>改哪里</dt><dd><code>controller_workspaces.py</code>，<code>prompts/controller/guide.md</code>，<code>execution.py:379</code>（并行数默认 2，这几次运行都配成 1）</dd><dt>依据</dt><dd>goal 模式切成 22 个文件不相交的范围，约 3 小时改完。流程里并行工作区和按文件合并都已实现，但三次运行都没有用过。</dd><dt>预期与注意</dt><dd>初次实现从 221 分钟降到 1 小时左右；每个作者的上下文也更小。</dd></dl></article><article class="rec" id="C2"><h4><span class="rid">C2</span>增量合并，合并后马上跑集成探针</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">时间</span><span class="tag">质量</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>每完成一个范围就合并，立刻跑几秒到几分钟的便宜探针：import 解析、接口清单、配置导出。全量对比留到最后。</dd><dt>改哪里</dt><dd>按文件合并的 <code>merge_candidate_parts</code>，<code>controller_scheduling.py</code></dd><dt>依据</dt><dd>goal 模式做了 26 次合并，每次合并后立即检查跨范围的 import、配置和命令行帮助；它的 import 检查器就是合并时发现问题后当场加的。</dd><dt>预期与注意</dt><dd>跨范围的问题在几分钟内暴露，而不是等到全量对比。</dd></dl></article><article class="rec" id="C3"><h4><span class="rid">C3</span>把长会话拆成按范围的短会话</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">tokens</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>一个会话只负责一个范围；修复会话只带相关文件。</dd><dt>改哪里</dt><dd>controller 的 guide 和 <code>run_agent</code> 的范围参数（后继分支已能传功能列表）</dd><dt>依据</dt><dd>作者每轮平均读回 28 万 tokens 的上下文，其中主要是会话自己先前写出的代码和命令输出，每一轮都要重读，所以缓存读取量随会话长度大致按平方增长。缓存读写占费用的 56%。</dd><dt>预期与注意</dt><dd>goal 模式的子代理每轮约 34 万 tokens，是它贵的主要原因，同样适用。</dd></dl></article></div><div class="group"><h3 id="gD">D · 知识包</h3><p class="note">知识包有 235 万 tokens，是原版源码的 2.7 倍；它是按需读取的，但一多半是被拆碎的数据，流程也不知道作者读了什么。</p><article class="rec" id="D1"><h4><span class="rid">D1</span>分层的作者视图，顶层是任务书</h4><div class="tags"><span class="tag p0">P0 · 优先做</span><span class="tag">tokens</span><span class="tag">质量</span><span class="tag src">两者都支持</span></div><dl><dt>改什么</dt><dd>规范包保留不动，另外生成一份给作者的视图，分四层：每个功能一份约 1 千 tokens 的任务书（归它的文件、相关的检查、这个模块特有的不变量和坑）、接口清单、行为契约（按需）、数据资源。提示词改成先读任务书。</dd><dt>改哪里</dt><dd><code>rewrite.py</code> 的 <code>make_workspace</code>，<code>knowledge.py</code>，<code>prompts/rewrite/runner.md</code>，<code>prompts/knowledge/retrieval.md</code>；任务书由读原版生成知识的那一步产出</dd><dt>依据</dt><dd>提示词要求先读的 <code>index.json</code> 有 10 万 tokens，几乎全是 ID 列表。契约里的标识符字段占 22%，去掉后接口和行为类契约从 78 万降到 45 万（实测）。goal 模式的任务书只有 2,300 到 4,900 字符，写的是“采样器消耗随机数，保持抽取顺序”这类话。</dd><dt>预期与注意</dt><dd>作者开工前要读的内容从十万级降到千级。</dd></dl></article><article class="rec" id="D2"><h4><span class="rid">D2</span>声明式数据走资源文件，并以对拍为主</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">tokens</span><span class="tag">质量</span><span class="tag src">两者都支持</span></div><dl><dt>改什么</dt><dd>配置、元数据、类别表以纯 JSON 资源文件交给作者，不再按参数路径拆成契约。对比配置解析结果时，把“哪个键、期望值、实际值”返回给作者；期望值本来就在数据契约里公开了，不增加泄露。</dd><dt>改哪里</dt><dd><code>knowledge.py</code> 的打包、读取和 enrichment 格式。生成这些数据契约的工具不在仓库里，在 owner 的 enrichment 步骤，要一起改</dd><dt>依据</dt><dd>数据类契约有 133 万 tokens，占整包 57%。光“模型配置”一个功能就占 84 万，而原版配置文件总共约 6.4 万。结构化的配置数据改成每个资源一个 JSON 文件后，从 77 万降到 24 万（实测）。goal 模式有 2.2 MB 的配置参考输出，子代理从不读它，只看差异。</dd><dt>预期与注意</dt><dd>D1 和 D2 合计把整包从约 235 万降到约 110 万 tokens，其中两个分项是实测，剩余的数据契约按同比例估算。</dd></dl></article><article class="rec" id="D3"><h4><span class="rid">D3</span>接口契约改成机器生成的接口清单</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">tokens</span><span class="tag">质量</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>按模块列出名字、签名和基类，类似类型存根文件；验证时逐项对比。</dd><dt>改哪里</dt><dd>知识生成步骤和 <code>knowledge.py</code></dd><dt>依据</dt><dd>现在是 2,888 条、48 万 tokens 的文字描述。goal 模式的整份接口清单是 414 KB，而且能逐项对比。本次运行有 190 处接口差异、75 个名字消失，文字契约没有拦住。</dd><dt>预期与注意</dt><dd>接口知识更短、更准，并且可以直接用于验收（见 E2）。</dd></dl></article><article class="rec" id="D4"><h4><span class="rid">D4</span>工作区自带检索脚本，并记账</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">质量</span><span class="tag">tokens</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>放一个不依赖 nanolize 安装的小脚本，支持按功能、类别、关键词和分页检索，每次调用记一条日志。作者会话的回执带上“每个功能检索了多少”。controller 拿它和改动文件对应的功能比对：写了却没查的功能标为“凭记忆实现”。</dd><dt>改哪里</dt><dd><code>knowledge.py</code> 的查询函数（单次最多 100 条、没有分页），<code>make_workspace</code>，<code>run_agent</code> 的回执</dd><dt>依据</dt><dd><code>nanolize knowledge-query</code> 在三次运行里一次都没有被调用，作者每次会话都自己写解析脚本。Fable 作者只读了知识包的约 11%，其余靠记忆；Codex 作者检索出的量相当于整包。流程对这两种情况都不知情。</dd><dt>预期与注意</dt><dd>这是发现“默写上游”最直接的信号。记账是尽力而为，作者仍可以绕过脚本直接读文件。</dd></dl></article><article class="rec" id="D5"><h4><span class="rid">D5</span>体积护栏</h4><div class="tags"><span class="tag p2">P2 · 可选</span><span class="tag">tokens</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>编译知识包时输出每个功能的“知识 tokens 与源码 tokens 之比”，超过 1 就告警；同一资源的数据契约数设上限。</dd><dt>改哪里</dt><dd><code>knowledge.py</code> 的 <code>compile_knowledge</code></dd><dt>依据</dt><dd>现在唯一的上限是 10,000 条契约，这次已经到了 9,177。</dd><dt>预期与注意</dt><dd>如果某个功能的规格说明始终比它的源码还长，对它来说“不看源码”就是净亏的，应当走 F1 的路径。</dd></dl></article></div><div class="group"><h3 id="gE">E · 代码质量</h3><p class="note">流程产出的代码通过了全部配置的检查，但可读性和保真度上都有检查没覆盖到的问题。</p><article class="rec" id="E1"><h4><span class="rid">E1</span>改写文档策略和体积度量</h4><div class="tags"><span class="tag p0">P0 · 优先做</span><span class="tag">质量</span><span class="tag src">两者都支持</span></div><dl><dt>改什么</dt><dd>把策略里要求删文档的那一条换成：公开的类和函数保留一条简短的文档字符串；保留解释“为什么”的注释，删掉复述代码的注释；不得为了体积目标删文档。体积目标改成“不含注释和文档字符串的代码 tokens”，数据表单列，总 tokens 只作参考。</dd><dt>改哪里</dt><dd><code>prompts/rewrite/policy.json:34</code>，<code>prompts/rewrite/runner.md:12</code>，<code>code_size.py:178</code></dd><dt>依据</dt><dd>策略原文是 “Aggressively remove unnecessary documentation, comments and explanatory boilerplate.” 公开接口的文档字符串覆盖率从 55.6% 掉到 13.5%（Fable 作者）和 0%（Codex 作者）；盲评文档分 1.42（满分 5）。</dd><dt>预期与注意</dt><dd>不增加成本。goal 模式按这样的规则做，覆盖率是 60%，文档 tokens 仍减到原来的 71%。</dd></dl></article><article class="rec" id="E2"><h4><span class="rid">E2</span>把通用的差分探针加进验收</h4><div class="tags"><span class="tag p0">P0 · 优先做</span><span class="tag">质量</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>四类探针：公开接口清单（名字、签名、基类）；所有命令行入口的帮助文本逐字节对比；配置解析结果；原生算子用随机输入逐位对比，包括非法输入时的报错行为。前三类对任何 Python 仓库都能在 Discover 阶段自动生成，结果以结构化差异返回。</dd><dt>改哪里</dt><dd>验收条件在 <code>controller.py:543-580</code>；比较逻辑在 <code>capability_verification.py:395-410</code></dd><dt>依据</dt><dd>goal 模式的对拍工具就是这几类探针加模型指纹。本次运行的 190 处接口差异和 239 组算子差异，现有检查都没有发现。</dd><dt>预期与注意</dt><dd>把“检查全过但行为不一致”的空间收窄。</dd></dl></article><article class="rec" id="E3"><h4><span class="rid">E3</span>增加比较器类型</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">质量</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>在“退出码”和“输出哈希”之外，增加数值容差、逐位相同和 JSON 路径级差异，由检查自己声明。原生算子默认用逐位相同。</dd><dt>改哪里</dt><dd><code>capability_verification.py:395-410</code></dd><dt>依据</dt><dd>现在没有数值或张量比较器，精度全靠测试自己判断；输出哈希只能告诉你“不一样”，不能告诉你哪里不一样。</dd><dt>预期与注意</dt><dd>是 A1 和 E2 的基础。</dd></dl></article><article class="rec" id="E4"><h4><span class="rid">E4</span>原生和数值内核默认原样保留</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">质量</span><span class="tag src">两者都支持</span></div><dl><dt>改什么</dt><dd>把 C++/CUDA 内核作为冻结资源交给作者，只有逐位对拍通过时才允许改写，并在提示词里写明。</dd><dt>改哪里</dt><dd><code>prompts/rewrite/*.md</code>（现在没有任何关于原生代码或数值算法的要求）</dd><dt>依据</dt><dd>Fable 作者默写的是上游旧版本：旋转 IoU 的主机分支用了一个不满足严格弱序的 <code>std::sort</code> 比较器，会触发未定义行为，是 owner 手工对拍才发现的。239 组差异全部在原生算子。goal 模式改写了内核（51,146 降到 37,549 tokens）仍然逐位一致，靠的是能看源码加对拍。</dd><dt>预期与注意</dt><dd>消除一类检查很难覆盖的风险。</dd></dl></article><article class="rec" id="E5"><h4><span class="rid">E5</span>把行为冻结清单写进契约</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">质量</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>逐项列出不能变的东西：名字、导入位置、参数名和顺序和默认值、返回值、异常类型和消息、日志文本、注册名、配置键和默认值。再加一条：无法证明不影响行为就不改，列入“可做未做”。</dd><dt>改哪里</dt><dd><code>prompts/rewrite/contract.md</code>，<code>prompts/rewrite/policy.json</code></dd><dt>依据</dt><dd>goal 模式的规则文件有这份清单；流程的契约只有“保留所描述的公开接口、入口、行为和安装”这样的概括表述。</dd><dt>预期与注意</dt><dd>给作者明确的边界，也给评审明确的检查项。</dd></dl></article><article class="rec" id="E6"><h4><span class="rid">E6</span>把质量信号交给 controller 和交付报告</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">质量</span><span class="tag src">两者都支持</span></div><dl><dt>改什么</dt><dd>“与上游相同行的比例”、文档覆盖率和体积测量里的结构指标进入 controller 的可见字段，并写进交付报告。有条件时对抽样文件做盲评，打可读性、文档、简洁、保真四项分。</dd><dt>改哪里</dt><dd><code>controller_history.py:39-44</code>（结构指标不在可见字段里），<code>controller.py:543-580</code>（验收不含任何质量条件，<code>reviewer</code> 角色的输出没有去处）</dd><dt>依据</dt><dd>本次运行 83.8% 的行与上游相同，这个数字流程里没有任何地方计算。相同行比例很高说明不看源码的重写没有带来重构，应改走 F1 的路径。</dd><dt>预期与注意</dt><dd>让“代码质量”有可以跟踪的数字。</dd></dl></article><article class="rec" id="E7"><h4><span class="rid">E7</span>源码里的数据表单独处理</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">tokens</span><span class="tag">质量</span><span class="tag src">两者都支持</span></div><dl><dt>改什么</dt><dd>纯字面量的数据表不让作者重打；体积度量里单列。数据的压缩（差分、去重）做成独立步骤，用“加载后的对象相等”来验证。</dd><dt>改哪里</dt><dd><code>code_size.py</code> 的分类，知识包的资源通道（D2）</dd><dt>依据</dt><dd>LVIS 类别表在交付物里占 163,645 tokens（25%），比原版还多 3,302。goal 模式把它写成差分形式，省了约 10.7 万，并验证了导出的表与原版完全相等。按现在的口径，50% 的体积目标靠简化逻辑代码是够不到的。</dd><dt>预期与注意</dt><dd>体积目标变得可达，且作者不必为数据付输出费用。</dd></dl></article><article class="rec" id="E8"><h4><span class="rid">E8</span>两遍制，加定向的第三轮</h4><div class="tags"><span class="tag p2">P2 · 可选</span><span class="tag">质量</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>行为验收通过后，按体积和结构指标挑出最大的几个文件，派限定范围的优化会话，节省低于阈值就停。</dd><dt>改哪里</dt><dd><code>controller.py:379</code>（优化轮数上限），<code>controller_history.py:39-44</code></dd><dt>依据</dt><dd>goal 模式每个范围做两遍，第二遍专攻最大的文件，主会话再对最大的 6 个文件派第三轮。流程已有优化和评审角色，但这几次运行 owner 把优化轮数设成了 0。</dd><dt>预期与注意</dt><dd>可选项，取决于 owner 要不要在验收后继续简化。</dd></dl></article></div><div class="group"><h3 id="gF">F · 架构选择</h3><p class="note">质量最好的结果来自“看源码、原地改写”。</p><article class="rec" id="F1"><h4><span class="rid">F1</span>增加“看源码、原地改写”的作者模式</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">质量</span><span class="tag">tokens</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>作者在原版的副本上按行为冻结规则改写，每次改动后跑差分探针。做成开关，不看源码的模式保留；按仓库或按功能选择，判据可以用 E6 的相同行比例和 D5 的知识与源码之比。</dd><dt>改哪里</dt><dd>模式定义在 <code>modes.py</code>，工作区创建在 <code>rewrite.py</code>；现在没有任何可以看源码的模式</dd><dt>依据</dt><dd>三条理由。质量：goal 模式用这种做法得到了盲评最好、算子逐位一致的结果。tokens：不看源码时，每一行保留下来的代码都要按输出 token 重新生成，输出占费用的 44%。独立性：对知名仓库，不看源码并不保证独立实现，Fable 作者默写了 84%。</dd><dt>预期与注意</dt><dd>代价是需要 E2 和 E5 作护栏；goal 模式被评审读出的行为差异是 17 处，流程只有 5 处。改得深，就更需要对拍来兜底。</dd></dl></article></div><div class="group"><h3 id="gG">G · 运行与交付</h3><p class="note">运行中的浪费和交付物的卫生。</p><article class="rec" id="G1"><h4><span class="rid">G1</span>预算上限和启动自检</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">时间</span><span class="tag">tokens</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>给总费用、墙钟、作者调用数设上限，到限就交付已验证的最好候选。第一次作者会话前跑一个 1 分钟的自检：依赖能否 import，编译器是否可见。</dd><dt>改哪里</dt><dd><code>execution.py:365-377</code>（作者调用数默认不封顶），<code>controller.py:1023</code>（决策轮数没有上限）</dd><dt>依据</dt><dd>本次运行第一次作者会话（$47，77 分钟）因为 runner 的沙箱配置有错，写出的代码没法执行，直到会话结束才发现。这是操作问题，但自检能挡住这一类错误。</dd><dt>预期与注意</dt><dd>最坏情况有上限。</dd></dl></article><article class="rec" id="G2"><h4><span class="rid">G2</span>owner 的输入走队列，不等锁</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">时间</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>owner 的答复和诊断写入收件箱，下一轮决策读取。</dd><dt>改哪里</dt><dd><code>execution.py:150-160</code>，<code>controller.py:896-899</code>（锁在整个作者会话期间持有）</dd><dt>依据</dt><dd>本次运行里 owner 的诊断因为等锁，错过了一次修复会话的开头。</dd><dt>预期与注意</dt><dd>owner 介入不再被长会话挡住。</dd></dl></article><article class="rec" id="G3"><h4><span class="rid">G3</span>回执里记录真实用量</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">tokens</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>runner 返回每次调用的 tokens 和费用，写进操作回执；G1 的费用上限也靠它。</dd><dt>改哪里</dt><dd><code>controller.py:393</code>（用量写死为 unavailable）</dd><dt>依据</dt><dd>后继分支的 guide 已经要求 controller 最小化时间和 tokens，但它只看得到耗时，看不到 tokens。</dd><dt>预期与注意</dt><dd>controller 的优化目标有了数据。</dd></dl></article><article class="rec" id="G4"><h4><span class="rid">G4</span>无人值守的会话改用 5 分钟档的缓存</h4><div class="tags"><span class="tag p2">P2 · 可选</span><span class="tag">tokens</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>这是 runner 的配置，不在分支代码里。Claude Code 的文档给出了 <code>CLAUDE_CODE_PROMPT_CACHE_TTL=5m</code> 和 <code>FORCE_PROMPT_CACHING_5M=1</code>。</dd><dt>改哪里</dt><dd>运行目录里的模型调用脚本</dd><dt>依据</dt><dd>本次运行的缓存写入全部按 1 小时档计费，共 $60.67；按 5 分钟档约 $38。goal 模式的子代理本来就是 5 分钟档。</dd><dt>预期与注意</dt><dd>单次工具调用超过 5 分钟时缓存会过期重写，要先在一次会话上实测。</dd></dl></article><article class="rec" id="G5"><h4><span class="rid">G5</span>交付前清理和校验</h4><div class="tags"><span class="tag p1">P1 · 其次</span><span class="tag">质量</span><span class="tag src">来自流程数据</span></div><dl><dt>改什么</dt><dd>保存候选时就校验报告映射，并指出具体是哪个路径；交付时剔除工作笔记；全流程只用一个体积测量函数。</dd><dt>改哪里</dt><dd><code>controller.py:421-422</code>，<code>report_site.py:117-118</code></dd><dt>依据</dt><dd>报告站点在最后一步生成失败，报错不指出是哪个路径。<code>PROGRESS.md</code> 进了交付分支；同一个文件在两处测量里一次计入、一次排除，controller 的交付说明因此写成 77.8%，与测量值 76.9% 不一致。</dd><dt>预期与注意</dt><dd>交付物和交付说明一致。</dd></dl></article><article class="rec" id="G6"><h4><span class="rid">G6</span>提交粒度和偏差清单</h4><div class="tags"><span class="tag p2">P2 · 可选</span><span class="tag">质量</span><span class="tag src">借鉴 goal 模式</span></div><dl><dt>改什么</dt><dd>交付分支保留按范围的提交和有意义的消息；从探针差异和作者报告自动生成“与上游的差异”。</dd><dt>改哪里</dt><dd>保存候选时的提交，交付步骤</dd><dt>依据</dt><dd>本次运行交付了 7 个提交，消息是同一句话。goal 模式有 84 个提交，按范围和遍数，README 里列出了与上游的差异。</dd><dt>预期与注意</dt><dd>交付物可以审阅、可以二分定位。</dd></dl></article></div></section>
+<section id="roadmap">
+  <h2>落地顺序</h2>
+  <p>分三个阶段。第一阶段不改架构，先解决“卡住”和“慢”；第二阶段把验证放进作者的内循环并打开并行；第三阶段处理质量上限。</p>
+  <div class="scroll-x"><table class="prose" style="min-width:760px"><thead><tr><th scope="col">阶段</th><th scope="col">目标</th><th scope="col">建议</th><th scope="col">为什么放在这里</th></tr></thead><tbody><tr><th scope="row">一</th><td>无人值守能跑完，验证不再拖时间</td><td><a href="#A1">A1</a> <a href="#B1">B1</a> <a href="#B2">B2</a> <a href="#B4">B4</a> <a href="#B5">B5</a> <a href="#E1">E1</a> <a href="#G1">G1</a> <a href="#G2">G2</a> <a href="#G3">G3</a> <a href="#G5">G5</a></td><td>都是局部改动，不依赖其他项；E1 只改一条策略和度量口径</td></tr><tr><th scope="row">二</th><td>作者自己能验证，按范围并行</td><td><a href="#A2">A2</a> <a href="#A3">A3</a> <a href="#B3">B3</a> <a href="#B6">B6</a> <a href="#C1">C1</a> <a href="#C2">C2</a> <a href="#C3">C3</a> <a href="#D1">D1</a> <a href="#D4">D4</a> <a href="#E2">E2</a> <a href="#E3">E3</a></td><td>需要第一阶段的失败摘要和并行检查作基础；任务书和范围检查要一起上</td></tr><tr><th scope="row">三</th><td>提高质量上限，压低 tokens</td><td><a href="#D2">D2</a> <a href="#D3">D3</a> <a href="#D5">D5</a> <a href="#E4">E4</a> <a href="#E5">E5</a> <a href="#E6">E6</a> <a href="#E7">E7</a> <a href="#E8">E8</a> <a href="#F1">F1</a> <a href="#B7">B7</a> <a href="#G4">G4</a> <a href="#G6">G6</a></td><td>涉及知识生成步骤和作者模式，改动面大；要靠第二阶段的探针兜底</td></tr></tbody></table></div>
+  <h3>时间上的预期</h3>
+  <p class="note">按本次流程运行的 688 分钟估算，不是实测。</p>
+  <div class="scroll-x"><table class="prose" style="min-width:560px"><thead><tr><th scope="col">改动</th><th scope="col">估算节省</th><th scope="col">依据</th></tr></thead><tbody><tr><th scope="row"><a href="#B2">B2</a> 基线复用</th><td>79 分钟</td><td>5 次采集里 4 次可以复用，每次约 20 分钟</td></tr><tr><th scope="row"><a href="#B1">B1</a> 并行检查</th><td>70 到 85 分钟</td><td>全量对比从约 18 分钟降到几分钟，共 5 次全量和 1 次保留的基线采集</td></tr><tr><th scope="row"><a href="#B4">B4</a> 固定开销</th><td>25 到 40 分钟</td><td>约 30 个改动类操作，每个约 1 分钟</td></tr><tr><th scope="row"><a href="#C1">C1</a> 并行作者</th><td>130 到 150 分钟</td><td>初次实现从串行 221 分钟降到 70 到 90 分钟</td></tr><tr><th scope="row">合计</th><td>约 300 到 350 分钟</td><td>11.5 小时降到 5.5 到 6.5 小时</td></tr></tbody></table></div>
+  <ul>
+    <li>没有计入的收益：<a href="#A1">A1</a> 和 <a href="#A2">A2</a> 减少修复轮数；无人值守时不再等 owner（两个 Codex 运行各 6 到 7 小时）。</li>
+    <li>tokens 上能直接算的只有 <a href="#G4">G4</a>：缓存写入从 $60.67 降到约 $38。<a href="#C3">C3</a> 和 <a href="#F1">F1</a> 的效果要实测。</li>
+  </ul>
+</section>
+
+<section id="keep">
+  <h2>不该从 goal 模式照搬的</h2>
+  <ul>
+    <li><strong>编排者直接读源码并动手修。</strong>controller 不看源码是隔离设计的一部分。该借的是“能看到差异”，不是“能看到源码”。</li>
+    <li><strong>靠规则保证测试不被改。</strong>流程的验证方隔离、证据绑定候选哈希、操作全程留痕更可靠，应该保留。</li>
+    <li><strong>它的用量。</strong>子代理的摄入是源码的 10.7 倍，输出是成品的 8.9 倍，这是它花 $703 的原因。借它的拆分方式，不借它的用量。</li>
+    <li><strong>自行判断哪些文件不算功能并删掉。</strong>goal 模式删了 CI、文档站、docker。流程里这由 owner 选范围决定，更稳妥。</li>
+    <li><strong>“改得深就一定好”。</strong>评审在 goal 模式的代码里读出 17 处行为差异，流程只有 5 处。</li>
+  </ul>
+</section>
+
+<section id="verify">
+  <h2>怎么验证这些改动有效</h2>
+  <p>每个阶段合入后，用同一个仓库、同一套检查、同一个作者模型重跑，对比下面的指标。本次流程运行的数字可以直接当基线。</p>
+  <div class="scroll-x"><table class="prose" style="min-width:620px"><thead><tr><th scope="col">指标</th><th scope="col">怎么量</th><th scope="col">本次运行</th></tr></thead><tbody><tr><th scope="row">墙钟</th><td>第一个操作到交付</td><td>688 分钟</td></tr><tr><th scope="row">验证周期</th><td>保存候选到拿齐验收证据</td><td>约 50 分钟</td></tr><tr><th scope="row">模型费用</th><td>每次调用记录的费用之和</td><td>$177.17</td></tr><tr><th scope="row">owner 介入次数</th><td>澄清答复、手工诊断、提示词修订</td><td>1 次答复，2 份诊断，5 次修订</td></tr><tr><th scope="row">纯代码 tokens 变化</th><td>不含注释和文档字符串的源码</td><td>−5.1%</td></tr><tr><th scope="row">文档字符串覆盖率</th><td>公开的类和函数</td><td>13.5%</td></tr><tr><th scope="row">与上游相同的行</th><td>同路径文件逐行比对</td><td>83.8%</td></tr><tr><th scope="row">知识检索量</th><td>检索命令的输出合计</td><td>最多约 25 万 tokens</td></tr><tr><th scope="row">盲评均分</th><td>可读性 / 文档 / 简洁 / 保真，抽 12 个文件</td><td>2.67 / 1.42 / 2.17 / 4.58</td></tr><tr><th scope="row">公开接口差异</th><td>接口清单差分</td><td>190 处</td></tr><tr><th scope="row">原生算子逐位差异</th><td>1,889 组输出</td><td>239 组</td></tr></tbody></table></div>
+  <ol>
+    <li>先在小仓库上回归，确认改动没有破坏流程。</li>
+    <li>第一阶段合入后重跑 detectron2，只比墙钟、验证周期和 owner 介入次数。这一步最好用 Codex 作者，因为它的运行受诊断缺失的影响最大。</li>
+    <li>第二阶段合入后重跑，比文档覆盖率、盲评、接口差异和算子差异。</li>
+    <li><a href="#F1">F1</a> 做成开关，在同一仓库上“不看源码”和“原地改写”各跑一次，两种作者模型都跑，比全部指标。</li>
+  </ol>
+  <p>goal 模式那次留下的对拍工具（接口清单、配置导出、模型指纹、命令行帮助、算子对拍、盲评材料）可以直接作为差分探针和质量指标的原型。</p>
+</section>
+
+<section id="method">
+  <h2>口径与局限</h2>
+  <ul>
+    <li><strong>数字来源。</strong>本次运行的时间来自操作记录，费用来自命令行工具记录的每次调用费用，已含区域系数。体积用 nanolize 自己的口径：源码加配置，tiktoken cl100k_base。</li>
+    <li><strong>知识检索量是上限。</strong>按检索命令的输出统计，同一条契约可能被读到多次，Codex 也可能在送入模型前截断输出。goal 模式的摄入量是用“缓存写入减输出”近似的，含每个子代理的系统提示词。两边口径不完全相同，只能比数量级。</li>
+    <li><strong>两个 Codex 运行还在进行。</strong>它们的费用没有折算，也没做过盲评和算子对拍。</li>
+    <li><strong>goal 模式、单会话和三方对比来自另一个会话。</strong>盲评、接口差异、239 组算子差异都是它的结论，这里读了数据和日志，没有独立复现。从评语看，盲评的评审也是模型，只做了文本审阅。</li>
+    <li><strong>这不是对照实验。</strong>作者模型和分支同时在变，每种配置只跑了一次，差异不能全部归因到分支改动或模型。</li>
+    <li><strong>本次运行里有两处是操作问题，不是工具缺陷。</strong>第一次作者会话的沙箱配置错误；中途 owner 下过“验收前必须重写”的指令，多花了一轮，后来收回。</li>
+    <li><strong>代码结论的核对程度。</strong>读的是 55ceb83，后继分支只看了新增的三次提交。根因表里，串行检查、300 秒上限、结果字段白名单、反馈脱敏、环境版本作废基线、保存候选清空工作树、策略文件第 34 行、知识包的写入和查询这几条逐行核对过，其余来自辅助阅读。</li>
+    <li><strong>预期收益都是估算。</strong>goal 模式的子代理实际跑了多少次定向测试、第二遍具体省了多少，都没有统计。</li>
+  </ul>
+</section>
+<footer>这是一份自包含的页面。相关的压缩结果报告见 <a href="../">Detectron2 压缩报告</a>。</footer>
+</div>
+<div id="tip" role="tooltip" hidden></div>
+<script>
+(function(){
+  var tip=document.getElementById('tip');
+  function show(el,x,y){
+    tip.textContent=el.getAttribute('data-tip'); tip.hidden=false;
+    var r=tip.getBoundingClientRect();
+    var left=Math.min(Math.max(8,x+12),window.innerWidth-r.width-8);
+    var top=y-r.height-12; if(top<8){top=y+16;}
+    tip.style.left=left+'px'; tip.style.top=top+'px';
+  }
+  function hide(){tip.hidden=true;}
+  document.querySelectorAll('[data-tip]').forEach(function(el){
+    el.addEventListener('pointermove',function(e){show(el,e.clientX,e.clientY);});
+    el.addEventListener('pointerleave',hide);
+    el.addEventListener('focus',function(){var r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top);});
+    el.addEventListener('blur',hide);
+  });
+})();
+
+</script>
+</body>
+</html>
