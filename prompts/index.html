@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>nanolize 提示词整合建议</title>
+<meta name="description" content="nanolize 里所有会被模型读到的文字放在哪里，以及把它们整合进一个 JSON 文件的建议和分步做法。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: one reading column; figures and tables use the full column, numbers sit in a mono utility face. */
+:root{
+  --bg:#f3f5f8; --surface:#fbfcfd; --ink:#131820; --ink-2:#465061; --muted:#727c8c; --rule:#dde2ea;
+  --accent:#2a78d6; --accent-soft:#cde2fb;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --on-s4:#0b0b0b;
+  --good-ink:#006300; --crit-ink:#b3261e;
+  --font-display:"Space Grotesk","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-body:"IBM Plex Sans","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,"Noto Sans SC",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1115; --surface:#171a1f; --ink:#eceff3; --ink-2:#b8c0cc; --muted:#8a94a3; --rule:#2a3039;
+  --accent:#3987e5; --accent-soft:#17395f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --on-s4:#ffffff;
+  --good-ink:#35c035; --crit-ink:#f07a72; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0e1115; --surface:#171a1f; --ink:#eceff3; --ink-2:#b8c0cc; --muted:#8a94a3; --rule:#2a3039;
+  --accent:#3987e5; --accent-soft:#17395f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --on-s4:#ffffff;
+  --good-ink:#35c035; --crit-ink:#f07a72; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 72px}
+.page{max-width:920px;margin-inline:auto;display:grid;gap:56px}
+.page > *{min-width:0}
+header{display:grid;gap:20px}
+.eyebrow{font:500 12.5px/1.5 var(--font-mono);letter-spacing:.05em;color:var(--muted);margin:0}
+h1{font:600 clamp(28px,5vw,40px)/1.2 var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 22px/1.3 var(--font-display);margin:0;text-wrap:balance}
+h3{font:600 15.5px/1.45 var(--font-body);margin:0;text-wrap:balance}
+p{margin:0;max-width:44em}
+.lede{font-size:17px;color:var(--ink-2)}
+section{display:grid;gap:18px}
+section > *{min-width:0}
+ul,ol{margin:0;padding-left:1.35em;max-width:44em;display:grid;gap:8px}
+a{color:var(--accent)}
+code{font-family:var(--font-mono);font-size:.88em;background:color-mix(in srgb,var(--ink) 7%,transparent);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+nav{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
+nav a{text-decoration:none;border-bottom:1px solid var(--rule)}
+nav a:hover{border-bottom-color:var(--accent)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14px;margin:0;max-width:44em}
+.facts dt{color:var(--muted);white-space:nowrap}
+.facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;display:grid;gap:4px;align-content:start}
+.kpi .k{font-size:13px;color:var(--muted)}
+.kpi .v{font:600 28px/1.2 var(--font-display);letter-spacing:-.01em}
+.kpi .s{font-size:13px;color:var(--ink-2);line-height:1.5}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 13px/1.2 var(--font-body);padding:6px 10px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);white-space:nowrap;color:var(--ink)}
+.pill i{font-style:normal;font-weight:700}
+.pill.ok i{color:var(--good-ink)} .pill.bad i{color:var(--crit-ink)} .pill.na{color:var(--muted)}
+td .pill{padding:3px 8px;font-size:12.5px}
+.fig{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:20px;display:grid;gap:16px}
+.fig > *{min-width:0}
+figcaption{font-size:13.5px;color:var(--ink-2);line-height:1.6;max-width:46em}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--ink-2);max-width:none}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.s1{background:var(--s1)} .s2{background:var(--s2)} .s3{background:var(--s3)} .s4{background:var(--s4)}
+.bars{display:grid;gap:10px}
+.bar-row{display:grid;grid-template-columns:minmax(0,17em) minmax(0,1fr);gap:4px 14px;align-items:center;font-size:13.5px}
+.bar-name{color:var(--ink-2);line-height:1.45}
+.bar-track{display:flex;align-items:center;gap:8px;min-width:0}
+.bar{display:block;height:18px;min-width:2px;border-radius:0 4px 4px 0;background:var(--s1);flex:0 0 auto}
+.bar-val{font:500 13px var(--font-mono);color:var(--ink);white-space:nowrap}
+.stack{display:flex;gap:2px;height:22px;flex:0 0 auto}
+.seg{display:block;min-width:2px}
+.seg.end{border-radius:0 4px 4px 0}
+.segbar{display:flex;gap:2px;height:28px}
+.blk{border-radius:4px;display:flex;align-items:center;padding-left:8px;min-width:0;color:#fff;font:600 12px var(--font-mono)}
+.blk.s4{color:var(--on-s4)}
+.meters{display:grid;gap:11px}
+.meter-row{display:grid;grid-template-columns:minmax(0,15em) minmax(60px,1fr) auto;gap:6px 14px;align-items:center;font-size:13.5px}
+.meter-name{color:var(--ink-2);overflow-wrap:anywhere}
+.meter{height:8px;border-radius:999px;background:var(--accent-soft)}
+.meter i{display:block;height:100%;border-radius:999px;background:var(--s1)}
+.meter-fig{display:flex;gap:10px;justify-content:flex-end;font-family:var(--font-mono);font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.meter-fig b{color:var(--ink);font-weight:600;min-width:3.6em;text-align:right}
+.scroll-x{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.5}
+th,td{padding:8px 12px;border-bottom:1px solid var(--rule);text-align:right;vertical-align:top;font-variant-numeric:tabular-nums}
+thead th{font-weight:500;color:var(--muted);font-size:12.5px;white-space:nowrap;vertical-align:bottom}
+tbody th{text-align:left;font-weight:500}
+td{font-family:var(--font-mono);font-size:13px;white-space:nowrap}
+td.txt,th.txt{text-align:left;font-family:var(--font-body);font-size:14px;white-space:normal;min-width:11em}
+tr.total th,tr.total td{font-weight:600;border-top:1px solid var(--ink-2)}
+.diagram svg{display:block;width:100%;height:auto;min-width:760px;color:var(--ink);font-family:var(--font-body)}
+[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.45;padding:6px 9px;border-radius:6px;max-width:260px}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--rule);padding-top:20px}
+@media (max-width:640px){
+  .bar-row{grid-template-columns:minmax(0,1fr)}
+  .meter-row{grid-template-columns:minmax(0,1fr) auto}
+  .meter{grid-column:1 / -1;order:3}
+  .fig{padding:16px}
+}
+
+.note{font-size:14px;color:var(--ink-2)}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.bars .bar{width:calc(var(--w,1)*76%)}
+table.prose th,table.prose td{text-align:left;font-family:var(--font-body);font-size:14px;white-space:normal;line-height:1.55}
+table.prose tbody th{min-width:9.5em;font-weight:500;color:var(--ink-2)}
+table.prose td{min-width:10em}
+table.num td{font-family:var(--font-mono)}
+table.num tbody th,table.num thead th:first-child{text-align:left}
+table.matrix th,table.matrix td{text-align:center;white-space:nowrap;vertical-align:middle}
+table.matrix td.txt,table.matrix th.txt{text-align:left;white-space:normal;font-family:var(--font-body);font-size:14px}
+table.matrix tbody th{font:500 13px var(--font-mono);text-align:left}
+table.matrix tr.grp th{text-align:left;font:600 13.5px var(--font-body);color:var(--ink);background:color-mix(in srgb,var(--ink) 5%,transparent);padding-top:10px}
+table.matrix a{text-decoration:none}
+.dot{color:var(--ink-2);font-size:12px}
+.cmp{display:grid;gap:12px}
+.cmp-row{display:grid;grid-template-columns:minmax(0,11em) minmax(0,1fr);gap:6px 14px;align-items:center;font-size:13.5px}
+.group{display:grid;gap:12px;margin-top:10px}
+.rec{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px 20px;display:grid;gap:10px;scroll-margin-top:16px}
+.rec h4{margin:0;font:600 16px/1.45 var(--font-body);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;text-wrap:balance}
+.rid{font:600 12.5px var(--font-mono);color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{display:inline-block;font:500 12px/1.2 var(--font-body);padding:4px 8px;border-radius:999px;border:1px solid var(--rule);color:var(--ink-2);white-space:nowrap}
+.tag.p0{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tag.p1{border-color:var(--ink-2);color:var(--ink)}
+.tag.st{border-style:dashed}
+.tag.ms-fixed{border-color:var(--good-ink);color:var(--good-ink)}
+.tag.ms-partial{border-color:var(--ink-2);color:var(--ink);border-style:dashed}
+.tag.ms-open{border-color:var(--crit-ink);color:var(--crit-ink)}
+.tag.ms-new{border-color:var(--accent);color:var(--accent)}
+.rec dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:0;font-size:14.5px;line-height:1.65}
+.rec dt{color:var(--muted);white-space:nowrap}
+.rec dd{margin:0;min-width:0}
+.diagram svg{min-width:860px}
+pre{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;overflow-x:auto;max-width:100%}
+pre code{background:none;padding:0;font-size:12.5px;line-height:1.6;white-space:pre;overflow-wrap:normal}
+.rec.design dd ol,.rec.design dd ul{max-width:none;margin-top:4px}
+.rec.design dd li{margin:0}
+h3[id],section[id],article[id]{scroll-margin-top:16px}
+@media (max-width:640px){
+  .cmp-row{grid-template-columns:minmax(0,1fr)}
+  .bars .bar{width:calc(var(--w,1)*50%)}
+  .rec{padding:16px}
+  .rec dl{grid-template-columns:minmax(0,1fr);gap:2px 0}
+  .rec dt{margin-top:8px}
+}
+
+section h3{margin-top:22px}
+section ul,section ol{padding-left:1.25em}
+section li{margin:6px 0}
+.bar.k-dir,.sw.k-dir{background:var(--s1)} .bar.k-code,.sw.k-code{background:var(--s2)} .bar.k-file,.sw.k-file{background:var(--s3)}
+.bar-row{grid-template-columns:minmax(0,22em) minmax(0,1fr)}
+.bars .bar{width:calc(var(--w,1)*70%)}
+pre.code{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;overflow-x:auto;font:13px/1.6 var(--font-mono);color:var(--ink)}
+pre.code code{background:none;padding:0;font-size:inherit;overflow-wrap:normal;white-space:pre}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin:12px 0}
+.pair pre.code{white-space:pre-wrap}.pair pre.code code{white-space:pre-wrap;overflow-wrap:anywhere}
+.pair .cap{margin:0 0 6px;font:600 12px/1.4 var(--font-mono);letter-spacing:.04em;color:var(--muted)}
+@media (max-width:640px){.bar-row{grid-template-columns:minmax(0,1fr)}.pair{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <p class="eyebrow">NANOLIZE · 提示词整合建议 · 2026-11-12</p>
+  <h1>提示词整合建议</h1>
+  <p class="lede">你的问题是：各个步骤的提示词太多、分布太乱，想整合到一起，比如放进一个 JSON 文件。这份报告先清点现在所有会被模型读到的文字放在哪里，再回答“放进一个 JSON”行不行、建议怎么做、分几步、代价是什么。这是建议，主线代码没有改。为了确认可行，我另外做了一个只走第一步的原型。</p>
+  <dl class="facts">
+    <dt>依据的代码</dt><dd>分支 <code>claude/change-list-review-chat</code>（<code>7f12f259a</code>），也就是 <code>main</code> 加上评审对话</dd>
+    <dt>一句话</dt><dd>可以整合进一个 JSON，建议做。分步走，搬的时候一个字都不改，改内容另算</dd>
+    <dt>原型</dt><dd>只在本地分支上，没有推送</dd>
+  </dl>
+  <div class="kpis">
+    <div class="kpi"><span class="k">提示词目录</span><span class="v">24 个资源</span><span class="s">共 14,086 tokens，分在 7 个子目录，由 10 个模块在 25 处加载。其中 12 个不到 150 tokens</span></div>
+    <div class="kpi"><span class="k">目录之外，写在 Python 里</span><span class="v">约 5.3 万字符</span><span class="s">44 个 MCP 工具说明、40 个作业工具摘要，以及作者和 controller 会读到的约 200 处句子</span></div>
+    <div class="kpi"><span class="k">同一条指令写在多处</span><span class="v">14 组</span><span class="s">最多的写了 4 处，分别在提示词文件和 Python 代码里</span></div>
+  </div>
+  <nav aria-label="目录">
+    <a href="#summary">结论</a><a href="#state">现状</a><a href="#problems">问题在哪</a><a href="#json">一个 JSON 行不行</a><a href="#design">建议的结构</a><a href="#steps">分步做法</a><a href="#boundary">放什么不放什么</a><a href="#risks">约束和风险</a><a href="#prototype">原型</a><a href="#review">被挑出的毛病</a><a href="#decide">需要你定的</a>
+  </nav>
+</header>
+<section id="summary"><h2>结论</h2>
+<ul>
+<li><strong>可以整合进一个 JSON 文件，建议这样做。</strong>在这套代码上它的代价比一般情况小：现有提示词几乎不含需要转义的字符，本来就是一段一行，仓库里也已经有“一个 JSON 做唯一来源、CI 检查是否同步”的做法。</li>
+<li><strong>让人觉得乱的，不只是目录里那 24 个文件。</strong>还有约 5.3 万字符会被模型读到的文字直接写在 Python 代码里，其中作者读到的约 63 处分散在 9 个模块。只把现有文件合成一个，要看全“某个角色到底收到了什么”仍然得翻代码。</li>
+<li><strong>建议的终点：</strong>各步骤的提示词文字都在一个 <code>prompts.json</code> 里，每条写明谁读、有哪些槽位；代码里只剩条目的 id；另有一个命令和一份生成的总览，按角色显示最终收到的全文。工具说明、拒绝消息和 skills 留在原处，但在总览里看得到。</li>
+<li><strong>建议的走法：</strong>先做三步（步骤 0、1、2），每一步模型收到的每个字节都不变，可以放心合并。去重会改变模型读到的内容，单独放在最后，需要用真实模型比较后再决定。</li>
+<li><strong>它解决的是“分布乱”，不直接解决“多”。</strong>文件从 24 个变成 1 个，但条目不会变少：把代码里的句子收进来之后条目反而更多，只是都在一个地方、按角色排好。要让文字本身变少，靠的是最后那步去重。</li>
+<li><strong>原型结果：</strong>第 1 步已在本地分支上做出来：23 个文本经新的加载方式读出来逐字节相同，固定流程回放 57 条全部一致。全量测试正在跑，结果出来后补在“原型”一节。</li>
+</ul></section><section id="state"><h2>现状：模型会读到的文字在哪里</h2><p>我把“提示词”按最宽的意思来数：凡是 nanolize 写好、最终会被某个模型读到的指令性文字都算，不管它现在放在提示词文件里还是写在代码里。</p><figure class="fig"><ul class="legend"><li><span class="sw k-dir"></span>已经在提示词目录里</li><li><span class="sw k-code"></span>写在 Python 代码里</li><li><span class="sw k-file"></span>别的文件</li></ul><div class="bars"><div class="bar-row"><div class="bar-name">提示词目录 <code>src/nanolize/prompts/</code>（24 个资源）</div><div class="bar-track"><span class="bar k-dir" style="--w:1.0000"></span><span class="bar-val">73,358</span></div></div><div class="bar-row"><div class="bar-name"><code>skills/</code>（9 个文件，宿主 agent 读）</div><div class="bar-track"><span class="bar k-file" style="--w:0.9922"></span><span class="bar-val">72,783</span></div></div><div class="bar-row"><div class="bar-name">MCP 工具说明（44 个函数的 docstring）</div><div class="bar-track"><span class="bar k-code" style="--w:0.3202"></span><span class="bar-val">23,490</span></div></div><div class="bar-row"><div class="bar-name">流程表 <code>assets/workflow.json</code></div><div class="bar-track"><span class="bar k-file" style="--w:0.1847"></span><span class="bar-val">13,548</span></div></div><div class="bar-row"><div class="bar-name">作业工具摘要（40 个 <code>@tool</code> 的第三个参数）</div><div class="bar-track"><span class="bar k-code" style="--w:0.1439"></span><span class="bar-val">10,553</span></div></div><div class="bar-row"><div class="bar-name">controller 会读到的代码内文字（约 140 处）</div><div class="bar-track"><span class="bar k-code" style="--w:0.1404"></span><span class="bar-val">10,300</span></div></div><div class="bar-row"><div class="bar-name">作者会读到的代码内文字（约 63 处）</div><div class="bar-track"><span class="bar k-code" style="--w:0.1240"></span><span class="bar-val">9,100</span></div></div></div><figcaption>模型会读到的文字现在放在哪里，按字符数。提示词目录只占其中一部分；写在 Python 里的四块合计约 5.3 万字符。另有约 185 条命令行帮助（约 1.1 万字符）没有画进来，它们是给人和宿主 agent 查的说明，不算提示词。</figcaption></figure><h3>提示词目录里的 24 个资源，按读它的角色分</h3><div class="scroll-x"><table class="prose" style="min-width:760px"><thead><tr><th scope="col">角色</th><th scope="col">文件数</th><th scope="col">tokens</th><th scope="col">文件（后面的数字是 tokens）</th></tr></thead><tbody><tr><th scope="row">controller</th><td>1</td><td>5,634</td><td><code>controller/guide.md</code> 5,634</td></tr><tr><th scope="row">作者</th><td>11</td><td>3,360</td><td><code>rewrite/policy.json</code> 983、<code>rewrite/runner.md</code> 774、<code>rewrite/controller.md</code> 772、<code>rewrite/contract.md</code> 489、<code>rewrite/objective.md</code> 76、<code>knowledge/authoring-policy.md</code> 74、<code>rewrite/advisory.md</code> 50、<code>rewrite/repair.md</code> 46、<code>knowledge/overview.md</code> 41、<code>knowledge/retrieval.md</code> 39、<code>rewrite/metadata.md</code> 16</td></tr><tr><th scope="row">宿主 agent</th><td>1</td><td>1,640</td><td><code>mcp/server.md</code> 1,640</td></tr><tr><th scope="row">任务出题、解题、评判</th><td>4</td><td>1,262</td><td><code>evaluation/examiner.md</code> 559、<code>evaluation/judge.md</code> 368、<code>evaluation/solver.md</code> 269、<code>evaluation/judge-lightweight.md</code> 66</td></tr><tr><th scope="row">评审页对话</th><td>1</td><td>1,110</td><td><code>review/chat.md</code> 1,110</td></tr><tr><th scope="row">测试设计</th><td>5</td><td>967</td><td><code>test-design/designer.md</code> 345、<code>test-design/fact-writer.md</code> 219、<code>test-design/reviewer.md</code> 141、<code>test-design/fact-reviewer.md</code> 138、<code>test-design/facts.md</code> 124</td></tr><tr><th scope="row">多个角色共用</th><td>1</td><td>113</td><td><code>evaluation/isolation.md</code> 113</td></tr></tbody></table></div><p class="note">目录已经有一份索引和统一的加载函数，<code>AGENTS.md</code> 里也写着“可复用的 agent 指令放在提示词目录里，按阶段分组”。所以这一部分不是没有规矩，而是切得碎：一半文件不到 150 tokens，是按“代码怎么拼”切的，不是按“谁来读”组织的。</p><h3>每个角色读到的文字来自哪里</h3><div class="scroll-x"><table class="prose" style="min-width:820px"><thead><tr><th scope="col">角色</th><th scope="col">提示词文件</th><th scope="col">代码里的文字</th></tr></thead><tbody><tr><th scope="row">作者（author，写候选代码的 agent）</th><td>11 个，3,360 tokens</td><td>约 63 处、约 9,100 字符，分布在 9 个模块：<code>rewrite.py</code>、<code>rewrite_policy.py</code>、<code>rewrite_stages.py</code>、<code>execution.py</code>、<code>source_reference.py</code>、<code>scopes.py</code>、<code>knowledge.py</code>、<code>author_selfcheck.py</code>、<code>job_tools/authoring.py</code></td></tr><tr><th scope="row">controller（决定每一步的 agent）</th><td>1 个，5,634 tokens（<code>controller/guide.md</code>），外加共用的隔离说明</td><td>约 140 处、约 10,300 字符：7 条参数说明、约 25 条“为什么现在不能调用”、85 条拒绝消息和其他结果句子，在 <code>job_tools/</code> 的 10 个模块和 <code>strategies/</code> 里</td></tr><tr><th scope="row">任务出题、解题、评判（examiner、solver、judge）</th><td>4 个，1,262 tokens，外加隔离说明 113 tokens</td><td>没有指令文字，代码只在末尾拼上 JSON 数据</td></tr><tr><th scope="row">测试设计的四个角色</th><td>5 个，967 tokens</td><td>没有</td></tr><tr><th scope="row">评审页对话</th><td>1 个，1,110 tokens</td><td>没有（页面的规划备注作为数据传入）</td></tr><tr><th scope="row">宿主 agent（经 MCP 和 skill 使用 nanolize 的 Codex 或 Claude Code）</th><td>1 个，1,640 tokens（<code>mcp/server.md</code>）</td><td>44 个 MCP 工具说明约 2.3 万字符；40 个作业工具摘要约 1.1 万字符；另有 <code>skills/</code> 9 个文件 7.3 万字节和两个插件清单</td></tr></tbody></table></div><figure class="fig"><div class="scroll-x diagram"><svg viewBox="0 0 880 400" role="img" aria-label="作者读到的文字现在来自 11 个提示词资源和 9 个 Python 模块，建议改成来自一个目录文件">
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+<text x="20" y="24" font-size="13" font-weight="600" fill="currentColor">现在</text>
+<rect x="20" y="38" width="250" height="62" rx="8" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+<text x="34" y="62" font-size="12.5" fill="currentColor">提示词目录里的 11 个资源</text>
+<text x="34" y="82" font-size="11.5" fill="currentColor" opacity=".7">rewrite/ 下 8 个，knowledge/ 下 3 个</text>
+<rect x="20" y="112" width="250" height="62" rx="8" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+<text x="34" y="136" font-size="12.5" fill="currentColor">9 个 Python 模块里的约 63 处句子</text>
+<text x="34" y="156" font-size="11.5" fill="currentColor" opacity=".7">rewrite.py、scopes.py、knowledge.py 等</text>
+<rect x="340" y="62" width="200" height="88" rx="8" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+<text x="354" y="88" font-size="12.5" fill="currentColor">各模块自己拼</text>
+<text x="354" y="108" font-size="11.5" fill="currentColor" opacity=".7">按策略、参考源码设置、</text>
+<text x="354" y="126" font-size="11.5" fill="currentColor" opacity=".7">范围、有无反馈分支</text>
+<rect x="610" y="38" width="250" height="136" rx="8" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+<text x="624" y="62" font-size="12.5" fill="currentColor">作者读到的</text>
+<text x="624" y="84" font-size="11.5" fill="currentColor" opacity=".7">提示词（标准输入）</text>
+<text x="624" y="102" font-size="11.5" fill="currentColor" opacity=".7">contract.json 里的规则</text>
+<text x="624" y="120" font-size="11.5" fill="currentColor" opacity=".7">feedback.json 里的指令</text>
+<text x="624" y="138" font-size="11.5" fill="currentColor" opacity=".7">知识包的说明</text>
+<text x="624" y="156" font-size="11.5" fill="currentColor" opacity=".7">自检报告的备注</text>
+<line x1="270" y1="69" x2="338" y2="96" stroke="currentColor" stroke-opacity=".6" marker-end="url(#arr)"/>
+<line x1="270" y1="143" x2="338" y2="116" stroke="currentColor" stroke-opacity=".6" marker-end="url(#arr)"/>
+<line x1="540" y1="106" x2="608" y2="106" stroke="currentColor" stroke-opacity=".6" marker-end="url(#arr)"/>
+<line x1="20" y1="200" x2="860" y2="200" stroke="currentColor" stroke-opacity=".18"/>
+<text x="20" y="228" font-size="13" font-weight="600" fill="currentColor">建议</text>
+<rect x="20" y="242" width="250" height="136" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+<text x="34" y="266" font-size="12.5" font-weight="600" fill="currentColor">prompts.json</text>
+<text x="34" y="288" font-size="11.5" fill="currentColor" opacity=".8">author.prompt</text>
+<text x="34" y="306" font-size="11.5" fill="currentColor" opacity=".8">author.contract</text>
+<text x="34" y="324" font-size="11.5" fill="currentColor" opacity=".8">author.feedback.repair</text>
+<text x="34" y="342" font-size="11.5" fill="currentColor" opacity=".8">author.scope.brief …</text>
+<text x="34" y="362" font-size="11.5" fill="currentColor" opacity=".8">每条带：谁读、有哪些槽位</text>
+<rect x="340" y="282" width="200" height="56" rx="8" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+<text x="354" y="305" font-size="12.5" fill="currentColor">拼装代码只写条目的 id</text>
+<text x="354" y="324" font-size="11.5" fill="currentColor" opacity=".7">prompts.text("author.…")</text>
+<rect x="610" y="242" width="250" height="56" rx="8" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+<text x="624" y="265" font-size="12.5" fill="currentColor">作者读到的</text>
+<text x="624" y="284" font-size="11.5" fill="currentColor" opacity=".7">和现在逐字节相同</text>
+<rect x="610" y="322" width="250" height="56" rx="8" fill="none" stroke="currentColor" stroke-opacity=".45"/>
+<text x="624" y="345" font-size="12.5" fill="currentColor">命令和生成的总览</text>
+<text x="624" y="364" font-size="11.5" fill="currentColor" opacity=".7">同一段拼装代码渲染出的全文</text>
+<line x1="270" y1="310" x2="338" y2="310" stroke="currentColor" stroke-opacity=".6" marker-end="url(#arr)"/>
+<line x1="540" y1="300" x2="608" y2="272" stroke="currentColor" stroke-opacity=".6" marker-end="url(#arr)"/>
+<line x1="540" y1="320" x2="608" y2="348" stroke="currentColor" stroke-opacity=".6" marker-end="url(#arr)"/>
+</svg></div><figcaption>以作者为例。现在要看全它读到的文字，得打开 11 个提示词资源和 9 个 Python 模块；建议之后文字在一个文件里（少数和代码绑死的片段除外），代码里只剩 id，另外生成一份按角色排好的全文总览。</figcaption></figure></section><section id="problems"><h2>问题具体在哪</h2>
+<ol>
+<li><strong>要看全一个角色读到的东西，得跨很多地方。</strong>作者：11 个提示词资源加 9 个 Python 模块。controller：一个指南文件，加上散在 <code>job_tools/</code> 10 个模块里的参数说明和各种回复句子。</li>
+<li><strong>代码里的文字没有清单。</strong>提示词目录有索引，代码里那约 5.3 万字符没有。改措辞的人不知道还有哪里说过同样的话。</li>
+<li><strong>同一条指令写在多处，清点到 14 组。</strong>下表是其中写了三四处的几条。哪一处改了、别处没改，模型就会读到互相矛盾的说法。</li>
+</ol>
+<div class="scroll-x"><table class="prose" style="min-width:640px"><thead><tr><th scope="col">指令</th><th scope="col">出现在</th><th scope="col">处数</th></tr></thead><tbody><tr><th scope="row">“一次只修一个根因”</th><td><code>rewrite/repair.md</code>、<code>rewrite_stages.py</code>、<code>rewrite/runner.md</code>、<code>policy.json</code></td><td>4</td></tr><tr><th scope="row">任务可用性优化的指引</th><td><code>rewrite_stages.py</code>、<code>execution.py</code>、<code>runner.md</code>、<code>rewrite/advisory.md</code></td><td>4</td></tr><tr><th scope="row">“评审者只读不改”</th><td><code>job_tools/authoring.py</code>、<code>rewrite/controller.md</code>、<code>run_agent</code> 的工具摘要、<code>controller/guide.md</code></td><td>4</td></tr><tr><th scope="row">怎样使用参考源码</th><td><code>source_reference.py</code>、<code>policy.json</code>、<code>runner.md</code></td><td>3</td></tr><tr><th scope="row">按范围分会话的说明</th><td><code>rewrite.py</code>、<code>scopes.py</code>、<code>controller/guide.md</code></td><td>3</td></tr><tr><th scope="row">自检脚本做什么</th><td><code>runner.md</code>、<code>author_selfcheck.py</code> 的脚本说明和报告备注</td><td>3</td></tr></tbody></table></div>
+<ol start="4">
+<li><strong>有一处代码和提示词文件必须逐字对上。</strong><code>rewrite_policy.py</code> 里存着 <code>rewrite/runner.md</code> 的两句原文，用来在“不许看源码”的配置下把它们换成旧说法。提示词文件里那两句只要改一个字，这种配置下的每一次作者调用都会报错；默认配置不检查，所以平时发现不了。这是我实现修改清单时引入的做法。</li>
+<li><strong>40 个作业工具摘要，controller 并不读。</strong>controller 每轮只收到工具名和参数，工具做什么写在它的指南里。这约 1.1 万字符的摘要只出现在工具目录里，给人和宿主 agent 查，内容和指南重复。</li>
+<li><strong>没有任何命令能列出提示词，或者显示某个角色最终收到的全文。</strong>想知道就得读拼装的代码，或者去作业目录里翻一次真实调用留下的文件。</li>
+</ol></section><section id="json"><h2>放进一个 JSON 文件，行不行</h2><p>行。通常反对把长文本放进 JSON 的几条理由，在这套代码上都量过：</p><div class="scroll-x"><table class="prose" style="min-width:720px"><thead><tr><th scope="col">通常的担心</th><th scope="col">在这里量到的</th></tr></thead><tbody><tr><th scope="row">到处都要转义</th><td>现有 23 个提示词文本约 6.8 万字符，其中双引号 42 个、反斜杠 0 个。放进 JSON 只有这 42 个引号要写成 <code>\"</code></td></tr><tr><th scope="row">改一个词，整段在 diff 里都变了</th><td>现在的文件已经是一段一行：有 40 行超过 500 个字符，<code>mcp/server.md</code> 整个文件就是一行 9,358 个字符。所以今天改一个词，diff 里也是一整段。建议把每个文本存成“每行一个字符串”的数组，粒度和现在一样</td></tr><tr><th scope="row">没法预览 Markdown</th><td>23 个文本里只有 2 个用到 Markdown 语法（标题和几行列表），其余都是纯段落。这些文件叫 <code>.md</code>，但基本不是 Markdown</td></tr><tr><th scope="row">仓库里没有这种做法</th><td>已经有：<code>assets/workflow.json</code> 是流程表的唯一来源，脚本用它生成两份 README 和 skill 里的表格，CI 检查有没有过期。<code>rewrite/policy.json</code> 本来就是 JSON。不过那两个文件里都是短字符串，长文本放进 JSON 在这个仓库是第一次</td></tr><tr><th scope="row">读取变慢</th><td>原型每次调用都重新解析整个文件：取一条小提示词从约 0.04 毫秒变成约 0.26 毫秒，生成一次作者提示词从 0.18 毫秒变成 0.89 毫秒。和一次模型调用相比可以忽略；正式实现按文件修改时间缓存，就回到原来的量级</td></tr></tbody></table></div>
+<p>确实存在的代价：</p>
+<ul>
+<li><strong>一处语法错，所有命令都起不来。</strong>现在坏一个提示词文件只影响一个角色。合成一个 JSON 后，少一个逗号就会让所有命令在启动时失败，因为规则是在模块导入时读的。应对办法有三条：规则改成用到时才读；加载失败时报出文件、行和列；加一个 <code>nanolize prompts check</code> 并放进 CI。这样后果和“某个 Python 文件有语法错”差不多：任何一次测试都会立刻发现，但在一个正在跑作业的可编辑安装上改坏文件，下一次调用仍然会失败。</li>
+<li><strong>改起来并不比现在容易，只是好找。</strong>长段落仍然是一行很长的字符串，改一个词的 diff 和现在一样大。读任何一条都要打开一个约 1.6 万 tokens 的文件；现在最小的文件只有 16 tokens。对人来说用编辑器搜 id 即可，对改代码的 agent 来说要按 id 搜到行再读那一段。</li>
+<li><strong>JSON 不能写注释。</strong>对某条提示词的说明要放进字段里。</li>
+<li><strong>逐行的修改历史在搬家那一次断开，</strong>没合并的分支会遇到冲突。细节见“约束和风险”。</li>
+</ul></section><section id="design"><h2>建议的结构</h2><p>一个文件 <code>src/nanolize/prompts/prompts.json</code>。每段提示词文字是一个条目，id 以读它的角色开头。</p><pre class="code"><code>{
+  &quot;schema_version&quot;: 1,
+  &quot;prompts&quot;: {
+    &quot;author.prompt&quot;: {
+      &quot;roles&quot;: [&quot;author&quot;],
+      &quot;title&quot;: &quot;The author&#x27;s prompt for every call&quot;,
+      &quot;slots&quot;: {
+        &quot;worktree&quot;: &quot;path of the authoring workspace&quot;,
+        &quot;plan_path&quot;: &quot;path of the frozen contract&quot;,
+        &quot;policy_instructions&quot;: &quot;the policy&#x27;s requirements, one per line&quot;,
+        &quot;feedback&quot;: &quot;the feedback line when a feedback file exists, else empty&quot;
+      },
+      &quot;text&quot;: [
+        &quot;Independently rewrite the selected capability graph in this new authoring repository.&quot;,
+        &quot;Start in a fresh context without the original analysis conversation. …&quot;,
+        &quot;Authoring workspace: ${worktree}&quot;
+      ]
+    },
+    &quot;author.feedback.repair&quot;: {
+      &quot;roles&quot;: [&quot;author&quot;],
+      &quot;title&quot;: &quot;Instruction inside repair feedback&quot;,
+      &quot;text&quot;: [
+        &quot;Repair one root cause or related capability group at a time, … the frozen target and checks stay unchanged.&quot;
+      ]
+    },
+    &quot;shared.isolation&quot;: {
+      &quot;roles&quot;: [&quot;examiner&quot;, &quot;solver&quot;, &quot;judge&quot;, &quot;test_designer&quot;, &quot;controller&quot;, &quot;review_chat&quot;],
+      &quot;title&quot;: &quot;Isolation notice appended at launch&quot;,
+      &quot;text&quot;: [&quot;…&quot;]
+    }
+  },
+  &quot;policy&quot;: { &quot;schema_version&quot;: 1, &quot;requirements&quot;: [&quot;…&quot;] }
+}</code></pre><ul><li><strong><code>text</code> 是行的数组。</strong>用换行把它们接起来，就是现在加载函数返回的内容，一个字节不差。空行就是一个空字符串。</li><li><strong><code>slots</code> 写明每个槽位是什么。</strong>现在槽位只出现在文本里的 <code>${name}</code>，含义要去调用处找。</li><li><strong><code>roles</code> 是固定的几个名字组成的列表，</strong>可以按它筛选。多个角色共用的条目放在 <code>shared.*</code> 下，列出所有读它的角色。</li><li><strong>id 按角色分组：</strong><code>author.*</code>、<code>controller.*</code>、<code>examiner.*</code>、<code>solver.*</code>、<code>judge.*</code>、<code>test_designer.*</code>、<code>review_chat.*</code>、<code>host.*</code>。打开文件按前缀搜，就能看到一个角色的全部文字。</li><li><strong>结构化的规则（现在的 <code>policy.json</code>）是同一个文件里的一个对象。</strong></li><li><strong>加载接口很小：</strong><code>prompts.text(id)</code> 取文本，<code>prompts.render(id, 槽位…)</code> 填槽位。代码里的 id 一律写成字面量，这样才能检查“用到的 id 都存在”。过渡期间旧的 <code>load_prompt("rewrite/runner.md")</code> 继续可用。</li></ul><h3>配套的三样东西</h3><ul><li><strong>一个命令。</strong><code>nanolize prompts list</code> 列出所有条目和读它的角色；<code>nanolize prompts show author</code> 显示这个角色最终收到的全文；<code>nanolize prompts check</code> 做下面的检查。</li><li><strong>一份生成的总览文档。</strong>按角色排好的全文，包括留在代码里的工具说明。它不是从目录文件拼出来的，而是直接调用真实的拼装代码、用占位值渲染出来的，所以和模型实际收到的一致。CI 检查它有没有过期，做法和现在的流程表一样。想一眼看全时看它，想改时改 JSON。</li><li><strong>几条自动检查。</strong>文件能解析，没有重复的键（解析时就要查，普通的解析会悄悄保留后一个）；格式是规范的；代码里用到的 id 都存在，每个条目都有人用；文本里的槽位和声明的一致；安装包里带着这个文件，而且不再带别的提示词文件；重复句子的清单只能变短。</li></ul><h3>JSON 还是 TOML</h3><p>结构不依赖格式。下面是同一个条目在两种格式里的样子。</p><div class="pair"><div><p class="cap">JSON</p><pre class="code"><code>&quot;author.feedback.repair&quot;: {
+  &quot;roles&quot;: [&quot;author&quot;],
+  &quot;title&quot;: &quot;Instruction inside repair feedback&quot;,
+  &quot;text&quot;: [
+    &quot;Repair one root cause or related capability group at a time, including necessary shared dependencies. Do not treat an unmet token target as a reason to stop repair. Gaps are not failures; the frozen target and checks stay unchanged.&quot;
+  ]
+},</code></pre></div><div><p class="cap">TOML</p><pre class="code"><code># why this sentence exists can be written here; a comment is never sent to the model
+[&quot;author.feedback.repair&quot;]
+roles = [&quot;author&quot;]
+title = &quot;Instruction inside repair feedback&quot;
+text = &#x27;&#x27;&#x27;
+Repair one root cause or related capability group at a time, including necessary shared dependencies. Do not treat an unmet token target as a reason to stop repair. Gaps are not failures; the frozen target and checks stay unchanged.&#x27;&#x27;&#x27;
+</code></pre></div></div><p>TOML 的好处是长文本不用加引号和逗号，可以写注释，少一类容易犯的语法错；评审核对过，23 个文本用它也能逐字节读回来。JSON 的好处是和你的想法、仓库现有的两个 JSON 一致，标准库既能读也能写（格式检查因此很容易做），原型已经验证过。我建议用 JSON；如果你更在意手工改起来顺手，TOML 是合理的替代，以后要换也只是一次机械转换。</p></section><section id="steps"><h2>分步做法</h2><p>每一步单独合并。“不变”指模型收到的每个提示词、每个工作区文件都和这一步之前逐字节相同，因此不需要重新评估模型行为。</p><div class="scroll-x"><table class="prose" style="min-width:860px"><thead><tr><th scope="col">步骤</th><th scope="col">做什么</th><th scope="col">模型读到的内容</th><th scope="col">怎么确认</th></tr></thead><tbody><tr><th scope="row">0　先留底，再让它看得见</th><td>不搬任何文字。新增命令 <code>nanolize prompts list</code> 和 <code>nanolize prompts show &lt;角色&gt;</code>，再生成一份总览文档：直接调用现有的拼装代码，用占位值把每个角色最终收到的全文渲染出来。同时把每一段渲染结果的摘要值存成一份快照放进测试，覆盖作者提示词的 16 种组合、契约文件和反馈文件里的指令、知识包说明、controller 的工具定义、MCP 工具列表。</td><td>不变</td><td>这一步本身就是后面几步的对照基准：之后每搬一次，快照必须一个字节都不变。</td></tr><tr><th scope="row">1　24 个资源合进一个文件</th><td>建立 <code>prompts.json</code>，加载函数改成从它读；旧的文件名继续可用，调用处以后再逐个改成 id。删掉 24 个文件，改打包配置、发布检查脚本、目录索引和 <code>AGENTS.md</code> 里的那条规矩。</td><td>不变</td><td>快照不变。原型已做到：23 个文本逐字节相同，固定流程回放 57 条全部一致。</td></tr><tr><th scope="row">2　作者读到的代码内文字搬进来</th><td>先给约 63 处句子列出逐条清单（现在只有估数）。能原样搬的搬进目录文件；把“不许看源码”配置下那两句的字符串替换，改成在目录文件里声明两种写法。和代码绑死的留在原处，并在总览里标出来（见下一节）。</td><td>不变</td><td>快照不变。抽查过 6 处：3 处可以原样搬，3 处不适合搬。</td></tr><tr><th scope="row">3　减少重复（改内容，单独决定）</th><td>对 14 组重复逐组决定：同一个读者读到两遍的，留一处；不同读者各自需要的，保留。</td><td><strong>会变</strong></td><td>契约和知识包的摘要值都会变，以前导出的知识包要重新导出；断言措辞的测试要跟着改；作者提示词变了，候选质量可能变，需要用真实模型跑一次对比。</td></tr></tbody></table></div><p class="note">顺序的理由：步骤 0 不搬任何东西，却同时给出“看得全”和“之后每一步的对照基准”，所以放最前。步骤 1 最便宜，原型已经证明可行。步骤 2 解决“作者读到的东西到处都是”，是最能缓解你说的问题的一步。步骤 3 才碰内容。</p></section><section id="boundary"><h2>哪些放进去，哪些不放</h2><p>划线的原则：<strong>独立成段的指令放进目录文件；对某个接口或某个条件的说明，留在那个接口或条件旁边。</strong>前者是你说的“各种步骤的提示词”，后者离开它描述的代码就看不懂，分开放更容易改一处忘一处。</p><div class="scroll-x"><table class="prose" style="min-width:760px"><thead><tr><th scope="col">什么</th><th scope="col">建议</th><th scope="col">理由</th></tr></thead><tbody><tr><th scope="row">24 个提示词资源</th><td>放进去（步骤 1）</td><td>它们就是各步骤的提示词</td></tr><tr><th scope="row">作者读到的代码内句子（约 63 处）</th><td>能原样搬的放进去（步骤 2）</td><td>它们会被拼进提示词或写进作者工作区的文件，和提示词是同一类东西。三类留在代码里：拒绝原因表（它的键是代码要用的分类，值是半句话）、自检脚本（一整段 Python 源码）、会话备注（拼了别的常量）</td></tr><tr><th scope="row">controller 工具的 7 条参数说明、40 个作业工具摘要</th><td>留在工具定义旁边，总览里显示</td><td>它们是接口的一部分，随函数的参数一起改；分开放更容易改一处忘一处</td></tr><tr><th scope="row">44 个 MCP 工具说明</th><td>留在 <code>mcp_server.py</code>，总览里显示</td><td>已经集中在一个文件里，不属于“分布乱”。里面有 100 个双引号，多数是 JSON 例子，放进 JSON 要逐个转义。搬出去还会改变工具契约的摘要值（见下一节）</td></tr><tr><th scope="row">拒绝消息和“为什么现在不能调用”（约 110 条）</th><td>不放</td><td>每一句属于触发它的那个条件，离开条件看不懂</td></tr><tr><th scope="row"><code>skills/</code> 的 9 个文件、两个插件清单</th><td>不放</td><td>插件格式要求它们是各自目录下的文件</td></tr><tr><th scope="row">命令行帮助（约 185 条）</th><td>不放</td><td>给人和宿主 agent 查用法，不是提示词</td></tr><tr><th scope="row"><code>assets/workflow.json</code></th><td>不动</td><td>已经是流程表的唯一来源</td></tr></tbody></table></div><p class="note">口径要说清楚：步骤 2 做完后，各个步骤的角色（作者、controller、出题、解题、评判、测试设计、评审对话）收到的指令文字基本都在目录文件里。但按上面图里最宽的口径（七块合计约 21 万字符），目录文件里大约是 39%；留在外面的是接口说明、回复句子和 skills。它们不搬，但会出现在生成的总览里。</p></section><section id="risks"><h2>约束和风险</h2><p>这些是搬提示词时一定会碰到的机制，都对着代码核实过。</p><div class="scroll-x"><table class="prose" style="min-width:820px"><thead><tr><th scope="col">机制</th><th scope="col">它是什么</th><th scope="col">对整合的影响</th></tr></thead><tbody><tr><th scope="row">运行环境标识</th><td>对安装包里的每个文件算摘要；作业记下启动时的值，值变了就不能续跑</td><td>每合并一步，之前启动、还没结束的作业都不能续跑。这和任何代码改动一样，但分几步就有几次，合并前先让在跑的作业结束</td></tr><tr><th scope="row">MCP 工具契约摘要</th><td>对 44 个 MCP 工具的名字、参数和说明算摘要；计划和提交都带着它，不一致会被拒绝</td><td>步骤 0 到 2 不影响它（核对过）。只有搬 MCP 工具说明才会改变它。顺带发现一个现有的不一致：这个值在 Python 3.13 和 3.11 上本来就不同，因为 3.13 在编译时去掉了说明文字的缩进（44 条说明总长 23,490 对 24,610 个字符）。我在两个版本上各算了一次，确认不同。它和提示词整合无关，可以另外单独处理</td></tr><tr><th scope="row">契约和知识包的摘要</th><td>作者契约、知识包各有一个摘要值，内容包含规则和几段说明文字</td><td>步骤 0 到 2 不变。步骤 3 改措辞就会变，以前导出的知识包通不过“重新渲染后一致”的检查，需要重新导出</td></tr><tr><th scope="row">固定流程回放基准</th><td>仓库里记录了固定流程下每个作者提示词的摘要，用来发现意外变化</td><td>它只覆盖固定策略，而默认是 controller 策略；仓库里的那份基准只在一个特定的 Python 上运行，别的环境直接跳过。所以不能只靠它证明字节没变，需要步骤 0 的快照</td></tr><tr><th scope="row">导入时加载</th><td>规则文件在模块导入时读取，而命令行入口会导入这个模块</td><td>目录文件只要有一处语法错，所有命令都起不来，包括 <code>--version</code>、MCP 服务和页面服务。评审时实际试过。今天只有规则文件一个文件能造成这种后果</td></tr><tr><th scope="row">打包配置</th><td>安装包只带子目录里的 <code>.md</code> 和 <code>.json</code></td><td>放在目录根上的 <code>prompts.json</code> 不改配置就不会进安装包；发布检查脚本里的文件清单也要一起改</td></tr><tr><th scope="row">断言措辞的测试</th><td>约 15 个测试文件检查提示词里有没有某句话</td><td>步骤 0 到 2 文字没变，不受影响；步骤 3 要跟着改</td></tr><tr><th scope="row">没合并的分支</th><td>仓库里有一些还没合并的分支改过提示词文件，评审时数到 11 个，其中一些可能已经不用</td><td>步骤 1 合并后，它们各会遇到一次“一边修改、一边删除”的冲突。转换脚本要保留到这些分支处理完，用它在分支上重新生成目录文件</td></tr><tr><th scope="row">修改历史</th><td>有 66 个提交改过提示词文件，其中 26 个改的是 controller 指南</td><td>搬家之后 <code>git blame</code> 会把每一行都记在搬家的那个提交上；评审模拟了一次转换提交，457 行里一行也追不回更早的历史。旧历史仍然可以按旧路径查</td></tr></tbody></table></div></section><section id="prototype"><h2>原型：只做了步骤 1</h2><p>为了确认第 1 步真的可行，我在一个本地分支上把它做了出来。没有推送，主线代码没有动。</p>
+<ul>
+<li><strong>做了什么：</strong>一个一次性的转换脚本，把 23 个文本文件和规则文件收进 <code>prompts.json</code>（79,287 字节，457 行）；加载函数改成读这个文件，旧文件名照常可用；删掉原来的 24 个文件；改了打包配置和一处测试。27 个已有文件有改动，新增 2 个文件。</li>
+<li><strong>文字有没有变：</strong>23 个文本经新的加载函数读出来，和原文件逐字节相同；规则文件解析出来的内容相同。评审另外独立核对了一遍：MCP 工具契约摘要、MCP 说明、规则的两种写法、隔离说明、四种作者提示词、知识包说明，改动前后都一致。</li>
+<li><strong>固定流程回放：</strong>57 条记录全部一致，和改动之前录的基准没有差别。</li>
+<li><strong>全量测试：</strong>正在跑，结果出来后更新这一行。</li>
+</ul>
+<p>原型没有做、正式实现要补上的：</p>
+<ul>
+<li>几处说明文字还指向已删除的文件：<code>AGENTS.md</code> 里“提示词按阶段分目录放”的规矩、提示词目录自己的索引、<code>docs/job-tools.md</code> 的两处、一处代码注释。不改的话，照 <code>AGENTS.md</code> 做事的 agent 会新建一个既不会被打包也不会被加载的文件。</li>
+<li>转换脚本是一次性的，原文件删掉后它的检查模式就不能用了。正式实现里要换成对目录文件本身的检查。</li>
+<li>每次读取都重新解析整个文件，没有缓存。</li>
+<li>槽位只有名字没有说明；角色是随手写的文字，还不能用来按角色筛选。</li>
+<li>没有 <code>prompts</code> 命令，没有总览文档，没有快照（它们属于步骤 0）。</li>
+</ul></section><section id="review"><h2>这份建议被挑出的毛病</h2><p>按之前的做法，这份建议在给你之前请一个只负责挑错的评审对着代码和原型审了一轮，只做了这一轮。它提了 15 条，下面是改变了建议内容的几条。</p>
+<ul>
+<li><strong>我原来打算把 44 个 MCP 工具说明也搬进 JSON，并写了“工具契约摘要不会变”。这不成立：</strong>这个摘要在两种 Python 版本上本来就不同，搬过去必然在其中一种上改变。现在的建议是不搬。</li>
+<li><strong>我原来写“一个文件是所有指令文字的唯一来源”。实际做不到：</strong>按最宽的口径，步骤 2 做完后目录文件里大约是四成。现在写明了口径和边界。</li>
+<li><strong>我原来想在目录文件里声明“每个角色由哪些片段按什么顺序组成”。这表达不了真实的拼装：</strong>作者提示词有四个独立的条件、16 种组合，同一份规则有三种渲染方式。现在改成总览直接调用现有的拼装代码。</li>
+<li><strong>我原来靠固定流程回放来证明字节不变。它不够：</strong>只覆盖固定策略。所以加了步骤 0 的快照。</li>
+<li><strong>我没写的几项代价：</strong>一处语法错所有命令都起不来；修改历史断开；没合并的分支会冲突。都已写进上面两节。</li>
+<li><strong>我有一句话说错了：</strong>草稿里写“提示词里那两句改一个字，每次作者调用都报错”。实际只在“不许看源码”的配置下才报错，默认配置不检查。上文已改。</li>
+</ul>
+<p class="note">没有复核的数字：14 组重复、作者约 63 处、controller 约 140 处，是清点代码得到的估数，评审没有逐条核对。步骤 2 的第一件事就是把清单列出来。其余数字（资源数、tokens、字符数、工具数、打包配置等）评审逐项核对过。</p></section><section id="decide"><h2>需要你定的</h2><div class="scroll-x"><table class="prose" style="min-width:760px"><thead><tr><th scope="col">问题</th><th scope="col">我的建议</th><th scope="col">另一种选择</th></tr></thead><tbody><tr><th scope="row">做到哪一步</th><td>步骤 0、1、2。步骤 3 等前面稳定后再单独决定</td><td>只做步骤 0：不搬文字，只加命令和总览。改动最小，但文字仍然分散</td></tr><tr><th scope="row">文件格式</th><td>JSON。和你的想法、仓库现有做法、原型都一致；标准库能读也能写，格式检查容易做</td><td>TOML。长文本不用加引号和逗号，可以写注释，同样内容 259 行对 457 行；Python 3.11 起标准库能读，但不能写</td></tr><tr><th scope="row">一个文件，还是每个角色一个</th><td>一个。id 以角色开头，以后想拆是机械操作</td><td>每个角色一个，约 9 个。坏一个只影响一个角色，单个文件也小</td></tr><tr><th scope="row">MCP 工具说明搬不搬</th><td>不搬，只在总览里显示</td><td>搬。说明和函数分开，摘要值在一种 Python 版本上会变一次；好处是顺带消除两个版本之间的差异</td></tr></tbody></table></div></section><footer>这是一份自包含的页面。相关：<a href="../implementation/">修改报告</a>、<a href="../changes/">修改清单</a>、<a href="../improvement/">修改建议报告</a>。</footer>
+</div>
+</body>
+</html>
