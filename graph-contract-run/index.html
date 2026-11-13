@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Detectron2 graph-contract 运行报告</title>
+<meta name="description" content="用 nanolize 的 graph-contract 清单压缩 detectron2 的一次运行：在测试设计阶段停止时的结果、花费和问题列表">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column; figures and tables use the full column, numbers sit in a mono utility face. */
+:root{
+  --bg:#f3f5f8; --surface:#fbfcfd; --ink:#131820; --ink-2:#465061; --muted:#727c8c; --rule:#dde2ea;
+  --accent:#2a78d6; --accent-soft:#cde2fb;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --on-s4:#0b0b0b;
+  --good-ink:#006300; --crit-ink:#b3261e;
+  --font-display:"Space Grotesk","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-body:"IBM Plex Sans","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,"Noto Sans SC",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1115; --surface:#171a1f; --ink:#eceff3; --ink-2:#b8c0cc; --muted:#8a94a3; --rule:#2a3039;
+  --accent:#3987e5; --accent-soft:#17395f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --on-s4:#ffffff;
+  --good-ink:#35c035; --crit-ink:#f07a72; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0e1115; --surface:#171a1f; --ink:#eceff3; --ink-2:#b8c0cc; --muted:#8a94a3; --rule:#2a3039;
+  --accent:#3987e5; --accent-soft:#17395f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --on-s4:#ffffff;
+  --good-ink:#35c035; --crit-ink:#f07a72; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 72px}
+.page{max-width:920px;margin-inline:auto;display:grid;gap:56px}
+.page > *{min-width:0}
+header{display:grid;gap:20px}
+.eyebrow{font:500 12.5px/1.5 var(--font-mono);letter-spacing:.05em;color:var(--muted);margin:0}
+h1{font:600 clamp(28px,5vw,40px)/1.2 var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 22px/1.3 var(--font-display);margin:0;text-wrap:balance}
+h3{font:600 15.5px/1.45 var(--font-body);margin:0;text-wrap:balance}
+p{margin:0;max-width:44em}
+.lede{font-size:17px;color:var(--ink-2)}
+section{display:grid;gap:18px}
+section > *{min-width:0}
+ul,ol{margin:0;padding-left:1.35em;max-width:44em;display:grid;gap:8px}
+a{color:var(--accent)}
+code{font-family:var(--font-mono);font-size:.88em;background:color-mix(in srgb,var(--ink) 7%,transparent);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+nav{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
+nav a{text-decoration:none;border-bottom:1px solid var(--rule)}
+nav a:hover{border-bottom-color:var(--accent)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14px;margin:0;max-width:44em}
+.facts dt{color:var(--muted);white-space:nowrap}
+.facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;display:grid;gap:4px;align-content:start}
+.kpi .k{font-size:13px;color:var(--muted)}
+.kpi .v{font:600 28px/1.2 var(--font-display);letter-spacing:-.01em}
+.kpi .s{font-size:13px;color:var(--ink-2);line-height:1.5}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 13px/1.2 var(--font-body);padding:6px 10px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);white-space:nowrap;color:var(--ink)}
+.pill i{font-style:normal;font-weight:700}
+.pill.ok i{color:var(--good-ink)} .pill.bad i{color:var(--crit-ink)} .pill.na{color:var(--muted)}
+td .pill{padding:3px 8px;font-size:12.5px}
+.fig{margin:0;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:20px;display:grid;gap:16px}
+.fig > *{min-width:0}
+figcaption{font-size:13.5px;color:var(--ink-2);line-height:1.6;max-width:46em}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--ink-2);max-width:none}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.s1{background:var(--s1)} .s2{background:var(--s2)} .s3{background:var(--s3)} .s4{background:var(--s4)}
+.bars{display:grid;gap:10px}
+.bar-row{display:grid;grid-template-columns:minmax(0,17em) minmax(0,1fr);gap:4px 14px;align-items:center;font-size:13.5px}
+.bar-name{color:var(--ink-2);line-height:1.45}
+.bar-track{display:flex;align-items:center;gap:8px;min-width:0}
+.bar{display:block;height:18px;min-width:2px;border-radius:0 4px 4px 0;background:var(--s1);flex:0 0 auto}
+.bar-val{font:500 13px var(--font-mono);color:var(--ink);white-space:nowrap}
+.stack{display:flex;gap:2px;height:22px;flex:0 0 auto}
+.seg{display:block;min-width:2px}
+.seg.end{border-radius:0 4px 4px 0}
+.segbar{display:flex;gap:2px;height:28px}
+.blk{border-radius:4px;display:flex;align-items:center;padding-left:8px;min-width:0;color:#fff;font:600 12px var(--font-mono)}
+.blk.s4{color:var(--on-s4)}
+.meters{display:grid;gap:11px}
+.meter-row{display:grid;grid-template-columns:minmax(0,15em) minmax(60px,1fr) auto;gap:6px 14px;align-items:center;font-size:13.5px}
+.meter-name{color:var(--ink-2);overflow-wrap:anywhere}
+.meter{height:8px;border-radius:999px;background:var(--accent-soft)}
+.meter i{display:block;height:100%;border-radius:999px;background:var(--s1)}
+.meter-fig{display:flex;gap:10px;justify-content:flex-end;font-family:var(--font-mono);font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.meter-fig b{color:var(--ink);font-weight:600;min-width:3.6em;text-align:right}
+.scroll-x{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.5}
+th,td{padding:8px 12px;border-bottom:1px solid var(--rule);text-align:right;vertical-align:top;font-variant-numeric:tabular-nums}
+thead th{font-weight:500;color:var(--muted);font-size:12.5px;white-space:nowrap;vertical-align:bottom}
+tbody th{text-align:left;font-weight:500}
+td{font-family:var(--font-mono);font-size:13px;white-space:nowrap}
+td.txt,th.txt{text-align:left;font-family:var(--font-body);font-size:14px;white-space:normal;min-width:11em}
+tr.total th,tr.total td{font-weight:600;border-top:1px solid var(--ink-2)}
+.diagram svg{display:block;width:100%;height:auto;min-width:760px;color:var(--ink);font-family:var(--font-body)}
+[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;line-height:1.45;padding:6px 9px;border-radius:6px;max-width:260px}
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--rule);padding-top:20px}
+@media (max-width:640px){
+  .bar-row{grid-template-columns:minmax(0,1fr)}
+  .meter-row{grid-template-columns:minmax(0,1fr) auto}
+  .meter{grid-column:1 / -1;order:3}
+  .fig{padding:16px}
+}
+</style>
+</head>
+<body style="margin:0">
+
+<div class="page">
+
+<header>
+  <p class="eyebrow">NANOLIZE · GRAPH-CONTRACT 清单 · 2026-11-13</p>
+  <h1>Detectron2 graph-contract 压缩运行：停止时的报告</h1>
+  <p class="lede">这次运行没有跑完。两个作业都停在重写开始之前的“测试设计”步骤：作业 1 由我取消，因为默认预算装不下测试设计；作业 2 在第 1 轮测试刚开始验证时按你的要求停止，等测试设计阶段优化之后重跑。没有产生压缩后的代码，所以体积比例、相同行比例和防默写记录都没有数据。下面是停止时确实拿到的结果。</p>
+  <div class="kpis">
+    <div class="kpi"><span class="k">体积比例</span><span class="v">无数据</span><span class="s">没有进入重写，没有候选代码</span></div>
+    <div class="kpi"><span class="k">与原版相同的行比例</span><span class="v">无数据</span><span class="s">同上</span></div>
+    <div class="kpi"><span class="k">补上测试的节点</span><span class="v">0 / 87</span><span class="s">第 1 轮有 72 个节点的 174 个测试文件通过静态检查；验证开始 19 分钟后停止，87 个节点都没验证</span></div>
+    <div class="kpi"><span class="k">防默写退回的文件</span><span class="v">0</span><span class="s">机制按默认开启，但没有作者会话，没有被触发</span></div>
+    <div class="kpi"><span class="k">模型费用</span><span class="v">$341.01</span><span class="s">有账单的会话合计；6 个被中止的会话没有账单，所以是下限</span></div>
+    <div class="kpi"><span class="k">耗时</span><span class="v">5 小时 35 分</span><span class="s">02:40 克隆原版，08:15 停止（UTC）。作业 1 跑了 2 小时 42 分，作业 2 跑了 2 小时 28 分</span></div>
+  </div>
+  <div class="pills" aria-label="状态">
+    <span class="pill bad"><i aria-hidden="true">✕</i>作业未完成（按要求停止）</span>
+    <span class="pill ok"><i aria-hidden="true">✓</i>保留的 137 个检查在原版上全部通过</span>
+    <span class="pill na">设计出的测试：0 个完成验证</span>
+    <span class="pill na">重写、验收、交付：未开始</span>
+  </div>
+  <dl class="facts">
+    <dt>压缩对象</dt><dd>detectron2，提交 <code>247691a</code>，106 项功能全部保留（<code>--scope all</code>，不排除任何节点）</dd>
+    <dt>工具</dt><dd>nanolize 分支 <code>claude/graph-contract</code>，提交 <code>eb54c43</code>。作业 2 用本地分支 <code>local/detectron2-graph-contract</code>（多 1 个提交 <code>9f97fef</code>，没有推送）</dd>
+    <dt>模型</dt><dd>控制器、作者、测试设计者、评审者都是 Claude Fable 5.2（1M 上下文）。测试设计者有自己的运行器，每次调用是一个全新会话</dd>
+    <dt>作业 1</dt><dd><code>9c1cf543</code>，03:02 提交，05:44 取消（UTC）</dd>
+    <dt>作业 2</dt><dd><code>be06d80f</code>，05:47 提交，08:15 取消（UTC）</dd>
+  </dl>
+  <nav aria-label="目录">
+    <a href="#progress">走到了哪一步</a><a href="#proposal">转换报告</a><a href="#design">测试设计</a><a href="#overlap">防默写</a><a href="#cost">花费和耗时</a><a href="#findings">对测试设计阶段的发现</a><a href="#deviations">偏离和放宽</a><a href="#issues">问题列表</a>
+  </nav>
+</header>
+
+<section id="progress">
+  <h2>走到了哪一步</h2>
+  <p>nanolize 在让作者动手之前有一个“冻结”阶段：准备环境、写测试事实、在原版上取基线、给没有有效测试的节点设计测试。两个作业都停在这个阶段的最后一步。</p>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">步骤</th><th class="txt">状态</th><th class="txt">结果</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">旧格式清单</th><td class="txt">完成</td><td class="txt">106 项功能，160 个检查</td></tr>
+        <tr><th scope="row"><code>contract-propose</code> 转换</th><td class="txt">完成</td><td class="txt">约半分钟，只读源码。数字见下一节</td></tr>
+        <tr><th scope="row">补写 interface</th><td class="txt">完成</td><td class="txt">43 个节点，新增 129 条、替换 12 条（配置项和默认值、注册名、文件格式、固定提示文字）</td></tr>
+        <tr><th scope="row">启动作业、准备环境</th><td class="txt">完成</td><td class="txt">两个作业各做了一次，每次约 3 分钟</td></tr>
+        <tr><th scope="row">写测试事实</th><td class="txt">完成</td><td class="txt">436 条事实，覆盖 47 个检查；10 条被丢弃。作业 1 用 34 分钟，作业 2 重放作业 1 的回答，用 3 分钟</td></tr>
+        <tr><th scope="row">原版基线</th><td class="txt">完成</td><td class="txt">137 个保留的检查全部通过，但没有一个能当作某个节点的证据（原因见“测试设计”）。每次约 40 分钟</td></tr>
+        <tr><th scope="row">测试设计，第 1 轮</th><td class="txt">完成（作业 2）</td><td class="txt">87 个节点，86 个设计会话返回结果，174 个文件进入验证</td></tr>
+        <tr><th scope="row">第 1 轮验证</th><td class="txt">进行 19 分钟后停止</td><td class="txt">每个测试在原版上跑 3 遍，再敲除它自己的节点。没有留下记录</td></tr>
+        <tr><th scope="row">第 2 轮、评审、最终验证</th><td class="txt">未开始</td><td class="txt">—</td></tr>
+        <tr><th scope="row">再取基线、重写、修复、验收、交付</th><td class="txt">未开始</td><td class="txt">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="proposal">
+  <h2>转换报告的数字</h2>
+  <p>转换命令是 <code>nanolize contract-propose &lt;原版&gt; --manifest &lt;旧清单&gt; --output &lt;新清单&gt; --json</code>，没有加 <code>--keep-checks</code>。各项按你给的规则处理，没有停下来确认。</p>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">项目</th><th>数量</th><th class="txt">处理</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">外部节点（external）</th><td>87</td><td class="txt">—</td></tr>
+        <tr><th scope="row">内部节点（internal）</th><td>19</td><td class="txt">—</td></tr>
+        <tr><th scope="row">interface 条目</th><td>1,910</td><td class="txt">之后我又补了 129 条、替换 12 条</td></tr>
+        <tr><th scope="row">读过的模块</th><td>400</td><td class="txt">没有读不了的模块</td></tr>
+        <tr><th scope="row">保留的检查</th><td>137</td><td class="txt">—</td></tr>
+        <tr><th scope="row"><code>checks_left_out</code></th><td>23</td><td class="txt">照常继续。其中 9 个只是因为用了 <code>detectron2.projects.point_rend</code> 这个运行时才建立的别名（O-1）</td></tr>
+        <tr><th scope="row"><code>checks_not_inspected</code></th><td>0</td><td class="txt">—</td></tr>
+        <tr><th scope="row"><code>external_capabilities_without_check</code></th><td>0</td><td class="txt">转换时每个外部节点都有检查。但基线验证之后，87 个节点都没有有效测试，全部交给测试设计者</td></tr>
+        <tr><th scope="row"><code>internal_capabilities_not_reached</code></th><td>0</td><td class="txt">—</td></tr>
+        <tr><th scope="row"><code>unresolved_exports</code></th><td>1</td><td class="txt">只记录：<code>densepose.data.datasets.builtin.DENSEPOSE_ANNOTATIONS_DIR</code></td></tr>
+        <tr><th scope="row"><code>carry_candidates</code></th><td>4</td><td class="txt">启动时用 <code>carry</code> 原样带过去：<code>builtin_meta.py</code>、<code>lvis_v0_5_categories.py</code>、<code>lvis_v1_categories.py</code>、<code>lvis_v1_category_image_count.py</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>启动参数按新格式的要求设置：全部功能、检查验证开启、测试设计开启、设计者用自己的运行器、给了 <code>test_template</code>（清单里没有保留纯 pytest 检查）、没有传 <code>--original-overlap</code>、没有附 knowledge 库、没有设任何预算和上限。</p>
+</section>
+
+<section id="design">
+  <h2>测试设计的结果</h2>
+  <p>为什么 87 个节点全都要补测试：保留的 137 个检查在原版上全部通过，但要证明一个检查是某个节点的证据，nanolize 会在不带 <code>.git</code> 的导出目录里再跑它。这些检查的包装脚本一上来就调用 git，在导出目录里直接失败，所以 137 个检查对 89 个叶子节点的 12,193 组对照全部无法评估（<code>export_control_not_passed</code>）。结果是 87 个节点没有有效测试，另外 2 个（构建文档、配置文件）免测。</p>
+  <figure class="fig">
+    <h3>作业 2 第 1 轮：从 87 个节点到进入验证的文件</h3>
+    <div class="bars">
+      <div class="bar-row"><div class="bar-name">需要补测试的节点</div><div class="bar-track"><span class="bar" style="width:80%"></span><span class="bar-val">87</span></div></div>
+      <div class="bar-row"><div class="bar-name">设计会话返回了结果</div><div class="bar-track"><span class="bar" style="width:79.1%"></span><span class="bar-val">86</span></div></div>
+      <div class="bar-row"><div class="bar-name">提出了测试文件</div><div class="bar-track"><span class="bar" style="width:77.2%"></span><span class="bar-val">84</span></div></div>
+      <div class="bar-row"><div class="bar-name">有文件通过静态检查、进入验证</div><div class="bar-track"><span class="bar" style="width:66.2%"></span><span class="bar-val">72</span></div></div>
+      <div class="bar-row"><div class="bar-name">在原版上通过验证</div><div class="bar-track"><span class="bar" style="width:0"></span><span class="bar-val">无记录</span></div></div>
+      <div class="bar-row"><div class="bar-name">最终补上测试</div><div class="bar-track"><span class="bar" style="width:0"></span><span class="bar-val">0</span></div></div>
+    </div>
+    <figcaption>单位是节点。86 个结果里 46 个是作业 1 的回答原样重放，40 个来自新会话。没返回的 1 个是 ViT 节点，会话到 900 秒上限被终止。</figcaption>
+  </figure>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">第 1 轮的测试文件</th><th>文件</th><th>节点</th><th class="txt">说明</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">设计者提出</th><td>213</td><td>84</td><td class="txt">2.06 MB 测试源码，1,910 条事实。2 个节点的设计者没有提出测试（Caffe2 导出、TensorMask）</td></tr>
+        <tr><th scope="row">通过静态检查</th><td>174</td><td>72</td><td class="txt">1.66 MB。这 174 个文件就是 nanolize 提交去验证的文件，逐个核对一致</td></tr>
+        <tr><th scope="row">被静态检查退回</th><td>39</td><td>12</td><td class="txt">节点数是全部文件都被退回的节点</td></tr>
+        <tr><th scope="row">通过验证（跑 3 遍 + 敲除）</th><td>无记录</td><td>无记录</td><td class="txt">验证被取消，没有写出记录</td></tr>
+        <tr><th scope="row">通过评审</th><td>—</td><td>—</td><td class="txt">评审没有运行</td></tr>
+        <tr class="total"><th scope="row">被接受</th><td>0</td><td>0</td><td class="txt">87 个节点都没有验证过的测试</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>第 1 轮结束时有 15 个节点没有任何候选文件：12 个全部被静态检查退回，2 个没有提出测试，1 个超时。它们只剩第 2 轮一次机会。</p>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">静态退回的原因</th><th>文件</th><th class="txt">内容</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><code>forbidden_call</code></th><td>21</td><td class="txt">全部是 PyTorch 的 <code>model.eval()</code>，没有一处是内置的 <code>eval()</code>。这是检查规则的误判，见发现 3</td></tr>
+        <tr><th scope="row"><code>invalid_facts</code></th><td>8</td><td class="txt">5 个文件的事实里有绝对路径，3 个的事实像实现代码</td></tr>
+        <tr><th scope="row"><code>private_name</code></th><td>6</td><td class="txt">用了下划线开头的名字</td></tr>
+        <tr><th scope="row"><code>outside_external_contract</code></th><td>4</td><td class="txt">用了外部契约之外的名字，例如 <code>point_rend.add_pointrend_config</code>、<code>detectron2.projects.deeplab.build_lr_scheduler</code></td></tr>
+        <tr><th scope="row"><code>fact_names_a_test</code></th><td>3</td><td class="txt">事实里写了测试的名字</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>一个文件可以同时有两个原因，所以各行相加是 42，不是 39。nanolize 把每轮的退回原因放在内存里，等整个设计步骤结束才写文件；作业被取消后这份记录不存在。上面的数字是我用 nanolize 自己的静态检查函数对设计者的原始回答重新算出来的，没有运行任何测试。</p>
+</section>
+
+<section id="overlap">
+  <h2>防默写的记录</h2>
+  <p>没有记录。<code>--original-overlap</code> 没有传，按默认的 auto 生效：作者写出的内容整体与原版重复不超过 40% 时什么都不说；超过之后，每次作者调用都会被告知限制和自己的数字，单个函数（比较行数 8 行以上）重复超过 60% 的文件被退回，一个文件最多退回 1 次。两个作业都没有走到作者会话，所以退回的文件数是 0。这个 0 表示机制没有被用到，不表示没有发现默写。</p>
+</section>
+
+<section id="cost">
+  <h2>花费和耗时</h2>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">项目</th><th>会话</th><th>会话时长</th><th>费用</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">作业 1：事实撰写 51、事实评审 51、测试设计 46</th><td>148</td><td>7.1 小时</td><td>$200.38</td></tr>
+        <tr><th scope="row">作业 1：控制器</th><td>1</td><td>9 秒</td><td>$0.38</td></tr>
+        <tr><th scope="row">评审拆分的离线试验（作业之外）</th><td>3</td><td>3 分钟</td><td>$4.29</td></tr>
+        <tr><th scope="row">作业 2：重放作业 1 的回答</th><td>148</td><td>—</td><td>$0</td></tr>
+        <tr><th scope="row">作业 2：新的测试设计会话</th><td>40</td><td>4.8 小时</td><td>$135.58</td></tr>
+        <tr><th scope="row">作业 2：控制器</th><td>1</td><td>9 秒</td><td>$0.38</td></tr>
+        <tr class="total"><th scope="row">合计（下限）</th><td>—</td><td>—</td><td>$341.01</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>有 6 个会话没有账单：作业 1 取消时正在运行的 4 个设计会话，以及两个作业里各 1 个超时的设计会话。运行器要等会话结束才拿到费用，会话被终止就没有记录。准备清单、监视作业的这个对话本身的费用也不在表里。</p>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">时间段（UTC）</th><th>时长</th><th class="txt">内容</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">02:40 – 03:02</th><td>22 分</td><td class="txt">克隆原版、写旧清单、转换、补 interface、写启动脚本</td></tr>
+        <tr><th scope="row">03:02 – 05:44</th><td>2 小时 42 分</td><td class="txt">作业 1：准备 3 分，事实 34 分，基线 39 分，测试设计 86 分后取消</td></tr>
+        <tr><th scope="row">05:47 – 08:15</th><td>2 小时 28 分</td><td class="txt">作业 2：准备 3 分，事实 3 分（重放），基线 43 分，第 1 轮设计 80 分，验证 19 分后取消</td></tr>
+        <tr class="total"><th scope="row">02:40 – 08:15</th><td>5 小时 35 分</td><td class="txt">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>单个测试设计会话的实测数字（两个作业共 86 个完成的新会话）：平均 414 秒，中位数 399 秒，15 个超过 600 秒，5 个超过 750 秒，另有 2 个到 900 秒被终止。作业 2 里每个设计会话平均 $3.39。</p>
+</section>
+
+<section id="findings">
+  <h2>对测试设计阶段的发现</h2>
+  <p>你打算先优化测试设计再重跑。下面是这次在真实项目上量到的、和这个阶段直接有关的问题，按影响大小排列。编号对应问题列表。</p>
+  <ol>
+    <li><strong>默认预算装不下测试设计（E-2）。</strong>设计步骤的截止时间用的是 <code>check_validation.budget_seconds</code>，默认按“每个检查 90 秒加每个节点 60 秒”算，这里是 17,670 秒，约 4 小时 54 分。设计者固定 4 个并行，作业 1 里 45 个节点用了 84 分钟，87 个节点的第 1 轮按这个速度要约 2 小时 40 分。每个测试顺序跑 3 遍，实测约 7.5 秒一遍，约 200 个文件验证一轮要 80 分钟以上，之后还有敲除。再加第 2 轮、评审，以及“有文件被退回就全体重跑”的最终验证，默认时间不够，作业 1 会在截止时以 0 个被接受的测试结束。</li>
+    <li><strong>评审是一次 900 秒的调用（E-1）。</strong>所有被接受的测试交给一个评审会话，要求每个文件一个结论；评审失败或不完整，全部测试作废。87 个节点规模下是约 210 个文件、2 MB 测试源码、1.1 MB 的请求。离线试验里 13 个文件拆成 3 个会话用了 182 秒。</li>
+    <li><strong>静态检查把 <code>model.eval()</code> 当成禁用的 <code>eval</code>（E-4）。</strong>规则取的是被调用的属性名，所以 <code>model.eval()</code> 命中了禁用列表里的 <code>eval</code>。第 1 轮 72 处调用、21 个文件因此被退回，其中 20 个文件没有别的问题；6 个节点的全部文件只因为这一条被退回。反馈给设计者的只有代码 <code>forbidden_call</code>，不说是哪个调用。</li>
+    <li><strong>保留的旧检查当不了节点证据（E-continuation-2）。</strong>检查的包装脚本需要 git，导出目录没有 <code>.git</code>，所以 137 个检查没有一个算有效，87 个节点全部进入测试设计。这一条决定了设计阶段的工作量。</li>
+    <li><strong>设计会话的 900 秒上限偏紧。</strong>86 个完成的会话里 5 个超过 750 秒；DensePose bootstrap 节点在作业 1 超时、在作业 2 用了 635 秒完成，ViT 节点在作业 2 超时（E-continuation-5、E-continuation-6）。</li>
+    <li><strong>中途停下就要全部重来。</strong>冻结完成之前没有检查点，<code>resume</code> 用不了；每轮的退回原因只在内存里。作业 2 靠运行器把逐字节相同的请求直接用作业 1 的回答作答，省掉了 148 个会话，也就是作业 1 已经花掉的 7.1 个会话小时和 $200.38。优化后提示词会变，这些记录在重跑时用不上。</li>
+    <li><strong>Python API 和命令行的默认值相反（O-3）。</strong><code>ExecutionController(check_validation=None)</code> 表示关闭检查验证，命令行不给 <code>--check-validation</code> 表示用默认策略开启。之前的 Detectron2 启动脚本走 Python API，实际是关着跑的。</li>
+  </ol>
+</section>
+
+<section id="deviations">
+  <h2>偏离和放宽</h2>
+  <p>你要求绕过问题时不关检查、不放宽验收，实在需要时要明确标出。下面几项需要标出。因为没有任何测试被接受、没有候选被验收，它们都没有影响到任何结果，但重跑时如果沿用就会生效。</p>
+  <ul>
+    <li><strong>放宽 · GPU 交付检查的范围（O-6）。</strong>上一次运行的 GPU 对比把全部 66 个上游测试文件当验收标准。其中 18 个用了外部契约之外的名字，这次只把另外 48 个算作标准，18 个照跑但不计回归。不这样做就等于把转换剔除的检查放回来。</li>
+    <li><strong>放宽 · 评审的全有或全无（E-1）。</strong>nanolize 的规则是评审不完整就作废全部测试。我在设计者的运行器里把评审拆成多个并行会话，某个会话失败时只作废它自己的文件。每个被接受的文件仍然要有一个独立会话的结论。评审没有运行，这条规则没有实际用到。</li>
+    <li><strong>偏离“预算全部用默认值”（E-2）。</strong>作业 2 用的 nanolize 多一个本地提交：测试设计的截止时间从 <code>budget_seconds</code> 改成作业剩余时间的一半。数值参数一个没改，但这是代码层面的预算变化。提交在本地分支，没有推送到 <code>claude/graph-contract</code>。</li>
+    <li><strong>重放（E-2）。</strong>作业 2 里 148 个角色调用的回答来自作业 1 的记录，条件是请求逐字节相同。评审请求从不重放。</li>
+    <li><strong>清单的 goal 文字没有改。</strong>旧清单里写着“没有强制压缩比例，功能和全新安装通过后就停止纯体积优化”，转换后原样保留。这次没有影响，重跑时它会影响压缩力度。</li>
+  </ul>
+</section>
+
+<section id="issues">
+  <h2>issues.md 的问题列表</h2>
+  <p>O 是启动前的观察，E 是运行中的错误和绕过，S 是停止之后的记录，都由提交作业的会话写。E-continuation 是另一个旁观这次运行的会话写的，原样保留；其中和作业有关的几条已对照作业记录核实。</p>
+  <div class="scroll-x">
+    <table>
+      <thead><tr><th class="txt">编号</th><th class="txt">问题</th><th class="txt">处理</th><th class="txt">结果</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">O-1</th><td class="txt"><code>contract-propose</code> 认不出运行时才建立的别名 <code>detectron2.projects.&lt;name&gt;</code>，9 个检查因此被剔除</td><td class="txt">名字不动；别名用一句话写进相关节点的 interface</td><td class="txt">作者能看到，测试不能用这些名字</td></tr>
+        <tr><th scope="row">O-2</th><td class="txt">23 个检查共用一个脚本，脚本里的名字被加到全部 23 个节点上</td><td class="txt">保持原样</td><td class="txt">多列的名字没有代价</td></tr>
+        <tr><th scope="row">O-3</th><td class="txt">Python API 不传 <code>check_validation</code> 是关闭，命令行不传是开启</td><td class="txt">启动脚本显式传入策略</td><td class="txt">检查验证和测试设计都开着</td></tr>
+        <tr><th scope="row">O-4</th><td class="txt">测试环境里装着一个旧的压缩版 checkout，普通 pytest 会测到错的代码</td><td class="txt"><code>test_template</code> 用 <code>python -S -B</code> 加一个固定入口脚本</td><td class="txt">13 个设计测试在导出目录里实测通过</td></tr>
+        <tr><th scope="row">O-5</th><td class="txt">导出目录没有编译好的原生扩展，涉及 <code>detectron2.layers</code> 的测试无法导入</td><td class="txt">原生源码与原版逐字节相同的目录借用原版扩展；改过的必须自己编译</td><td class="txt">同上</td></tr>
+        <tr><th scope="row">O-6</th><td class="txt">GPU 交付检查原来以全部 66 个上游测试文件为标准</td><td class="txt"><strong>放宽</strong>：只把 48 个只用外部契约的文件算标准</td><td class="txt">未用到（没有交付）</td></tr>
+        <tr><th scope="row">E-1</th><td class="txt">设计测试的评审是一次 900 秒的调用，规模上做不完</td><td class="txt">在设计者运行器里拆成并行会话；<strong>放宽</strong>了全有或全无</td><td class="txt">只在离线试验里跑过；作业里评审没有运行</td></tr>
+        <tr><th scope="row">E-2</th><td class="txt">默认预算装不下测试设计，作业 1 会以 0 个测试结束</td><td class="txt">取消作业 1；nanolize 本地提交改设计截止时间；重放作业 1 的回答；提交作业 2</td><td class="txt">作业 2 的第 1 轮用了 80 分钟，之后被停止，改动是否足够没有得到验证</td></tr>
+        <tr><th scope="row">E-3</th><td class="txt">取消作业 1 时报 <code>Job belongs to another owner</code></td><td class="txt">我的控制脚本参数和启动脚本不一致，改成完全一致</td><td class="txt">第二次取消成功。不是 nanolize 的问题</td></tr>
+        <tr><th scope="row">E-4</th><td class="txt">静态检查把 <code>model.eval()</code> 判成禁用调用</td><td class="txt">没有处理，停止之后才从记录里发现</td><td class="txt">21 个文件、6 个节点受影响</td></tr>
+        <tr><th scope="row">E-continuation-1</th><td class="txt">旁观会话用 HTTPS 拉 nanolize 时没有凭据</td><td class="txt">改用已有的 checkout</td><td class="txt">与作业无关</td></tr>
+        <tr><th scope="row">E-continuation-2</th><td class="txt">保留检查的包装脚本需要 git，导出目录没有，137 个检查都当不了节点证据</td><td class="txt">检查不动，87 个节点交给测试设计</td><td class="txt">已核实。设计没有完成，这个缺口还在</td></tr>
+        <tr><th scope="row">E-continuation-3</th><td class="txt">旁观会话想用的网站托管服务没有开通</td><td class="txt">它改为在本地准备报告</td><td class="txt">与作业无关</td></tr>
+        <tr><th scope="row">E-continuation-4</th><td class="txt">旁观会话的监视进程在一次中断后消失</td><td class="txt">它重新确认作业进程还在</td><td class="txt">与作业无关</td></tr>
+        <tr><th scope="row">E-continuation-5</th><td class="txt">作业 1：DensePose bootstrap 节点的设计会话 900 秒超时</td><td class="txt">不改上限，留给第 2 轮</td><td class="txt">已核实。作业 2 里这个节点用 635 秒完成</td></tr>
+        <tr><th scope="row">E-continuation-6</th><td class="txt">作业 2：ViT 节点的设计会话 900 秒超时</td><td class="txt">不改上限，留给第 2 轮</td><td class="txt">已核实。第 2 轮没有开始</td></tr>
+        <tr><th scope="row">E-continuation-7</th><td class="txt">作业 2 在验证完成前被取消</td><td class="txt">旁观会话记录了事件，没有重启</td><td class="txt">同 S-1</td></tr>
+        <tr><th scope="row">S-1</th><td class="txt">作业 2 按你的要求停止（由另一个会话转达并执行取消）</td><td class="txt">视为你的决定，不恢复、不重启、不提交作业 3</td><td class="txt">运行到此为止</td></tr>
+        <tr><th scope="row">S-2</th><td class="txt">取消后第 1 轮的退回记录不存在</td><td class="txt">用 nanolize 的静态检查函数对设计者的回答重算，只读</td><td class="txt">结果与提交去验证的 174 个文件完全一致</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>旁观会话还在 issues.md 里写了一段对 E-1 和 E-2 的审计，结论已并入上面的“偏离和放宽”。</p>
+</section>
+
+<footer>
+  <p>数据来自运行目录里的 <code>issues.md</code>、<code>job2-round1-static.json</code>、<code>profile/proposal-report.json</code> 和两个作业自己的记录。两个作业的工作区、设计者的回答、重放记录都保留着，可以直接用于重跑前的分析。时间都是 UTC。</p>
+</footer>
+
+</div>
+
+</body>
+</html>
