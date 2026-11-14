@@ -98,7 +98,7 @@ td .pill { margin-left: 2px; }
 <header>
   <h1>nanolize 默认设置修改方案（第二版）</h1>
   <p class="meta">2026-11-14 · 基于 <code>main</code>（<code>fe9b3bb</code>）· 这是修改方案，代码还没有改 · <a href="../default-settings/">第一版</a></p>
-  <nav><a href="#summary">结论</a><a href="#map">逐条对照</a><a href="#c1">新格式流程</a><a href="#c2">数据文件</a><a href="#c3">无人值守</a><a href="#c4">Claude 适配器</a><a href="#c5">漏配即拒绝</a><a href="#c6">试调运行器</a><a href="#c7">入口支持 Claude</a><a href="#c8">出错时的规则</a><a href="#files">涉及的文件</a><a href="#prompt">改完后的 prompt</a><a href="#decide">待确认</a><a href="#plan">实施与验证</a></nav>
+  <nav><a href="#summary">结论</a><a href="#map">逐条对照</a><a href="#c1">新格式流程</a><a href="#c2">数据文件</a><a href="#c3">无人值守</a><a href="#c4">Claude 适配器</a><a href="#c5">漏配即拒绝</a><a href="#c6">试调运行器</a><a href="#c7">入口支持 Claude</a><a href="#c8">无人值守选项</a><a href="#files">涉及的文件</a><a href="#prompt">改完后的 prompt</a><a href="#decide">已定的取舍</a><a href="#plan">实施与验证</a></nav>
 </header>
 
 <p class="lead">这次 detectron2 实验的启动 prompt 有 40 多行，其中十几条是靠人逐条写明的设置。这一页说明怎样把它们变成 nanolize 的默认行为，让以后的 prompt 只需要写项目、范围、用什么模型和汇报要求，最短可以是一行命令。“范围”按要求不动。</p>
@@ -106,8 +106,8 @@ td .pill { margin-left: 2px; }
 <div class="cards">
   <div class="card"><div class="n">要做的改动</div><div class="big">8 处</div><p>4 处改默认值和行为，1 处新增 Claude 适配器，3 处改技能文档里的流程、入口和规则</p></div>
   <div class="card"><div class="n">本来就是默认</div><div class="big">5 条</div><p>prompt 里重申过，但 nanolize 已经这样做，不用改</p></div>
-  <div class="card"><div class="n">待你确认</div><div class="big">5 项</div><p>方案里需要拍板的地方，每项都写了建议</p></div>
-  <div class="card"><div class="n">改完后的 prompt</div><div class="big">1 行命令</div><p>再加两句话；现在是 40 多行</p></div>
+  <div class="card"><div class="n">已定的取舍</div><div class="big">5 项</div><p>原来待确认的五项，都已按建议定下来</p></div>
+  <div class="card"><div class="n">改完后的 prompt</div><div class="big">1 行命令</div><p>再加一句汇报要求；现在是 40 多行</p></div>
 </div>
 
 <h2 id="summary">结论</h2>
@@ -119,10 +119,10 @@ td .pill { margin-left: 2px; }
   <li><strong>漏配置时提交即拒绝。</strong>新格式清单下，作者不是 codex 又没给写事实和补测试的运行器，或者没有可用的单文件测试命令，提交时直接报错并写明要给什么，不再悄悄跳过。</li>
   <li><strong>试调运行器，不通就自己修好接着跑。</strong>对每个不是内置 codex 命令的运行器做一次很小的真实调用，提交前一次，作业启动时再一次。不通时由启动作业的 agent 自己修好再继续，不停下来等人。</li>
   <li><strong><code>$nanolize &lt;目录&gt;</code> 支持 Claude。</strong>现有的一行入口只会用 codex。改完后它可以由 Claude Code 来启动，作业里的作者、控制器、写事实和补测试也可以用 Claude；不写明时，作业用的 agent 和启动它的 agent 是同一种。</li>
-  <li><strong>出错时怎么处理写进技能文档。</strong>“遇到错误自己绕过并记录、不靠放宽验收来绕”这段话从 prompt 挪进技能文档，作为无人值守时的规则。</li>
+  <li><strong>无人值守选项。</strong>入口加 <code>unattended=on</code>。带上它，agent 按给定的范围自己提交，出错时按技能文档里的规则自己处理，全程不等人。“不要停下来等我”和“遇到错误自己绕过并记录、不靠放宽验收来绕”这两段话都不用再写进 prompt。</li>
 </ol>
-<p>不改的只有一条：范围的默认值仍是 <code>core</code>。改完后要在 prompt 里写的只有：项目、范围、用什么模型、一句“无人值守”，以及汇报要求。</p>
-<p class="muted">和第一版相比：新增第 6、7、8 三处；“提交那一步要不要也省掉”没有定，放在<a href="#decide">待确认</a>第 5 项。</p>
+<p>不改的只有一条：范围的默认值仍是 <code>core</code>。改完后要在 prompt 里写的只有：项目、范围、用什么模型、要不要无人值守，以及汇报要求。</p>
+<p class="muted">和第一版相比：新增第 6、7、8 三处；原来待确认的五项都已按建议定下，见<a href="#decide">已定的取舍</a>。</p>
 <div class="note">这一页的内容来自读 <code>main</code> 的代码和这次实验的记录。没有改代码，也没有跑测试；文中标了“实现时确认”的地方是还没有核实的。</div>
 
 <h2 id="map">prompt 逐条对照</h2>
@@ -145,8 +145,8 @@ td .pill { margin-left: 2px; }
 <tr><td>不给清单附详细的 knowledge 库</td><td>转换时已经去掉</td><td>不变</td></tr>
 <tr><td>预算和上限都不设</td><td>已是默认</td><td>不变</td></tr>
 <tr><td><code>owner_attends: false</code></td><td>默认 <code>true</code></td><td>默认 <code>false</code> <span class="pill good">改动 3</span></td></tr>
-<tr><td>目标是完整跑完，中途不要停下来等我</td><td>会停两处：作业可能为提问而暂停；一行入口的流程等人在页面上点提交</td><td>作业自己不再停下来等人 <span class="pill good">改动 3</span>。提交那一步仍要人点一次，要不要省掉见待确认第 5 项。prompt 里留一句“无人值守”</td></tr>
-<tr><td>遇到错误自己绕过并记录，不靠放宽验收来绕</td><td>写在 prompt 里</td><td>写进技能文档，作为无人值守时的规则 <span class="pill good">改动 8</span></td></tr>
+<tr><td>目标是完整跑完，中途不要停下来等我</td><td>会停两处：作业可能为提问而暂停；一行入口的流程等人在页面上点提交</td><td>作业自己不再停下来等人 <span class="pill good">改动 3</span>；入口带 <code>unattended=on</code> 时由 agent 自己提交 <span class="pill good">改动 8</span></td></tr>
+<tr><td>遇到错误自己绕过并记录，不靠放宽验收来绕</td><td>写在 prompt 里</td><td>写进技能文档，带 <code>unattended=on</code> 时适用 <span class="pill good">改动 8</span></td></tr>
 <tr><td>启动前用一次小的真实调用确认运行器能用</td><td>prompt 里没写，这次是 agent 自己做的</td><td>提交前由 agent 试调，作业启动时再自动做一次；不通就自己修好接着跑 <span class="pill good">改动 6</span></td></tr>
 <tr><td>汇报哪些数字、出公开网页</td><td>写在 prompt 里</td><td>留在 prompt 里。默认流程自带的报告是否已经包含这些数字，没有核对</td></tr>
 </tbody></table></div>
@@ -203,7 +203,7 @@ td .pill { margin-left: 2px; }
 <tr><td><code>builtin_meta.py</code></td><td class="num">8,171</td><td class="num">55.4%</td><td>只列出来，由启动作业的一方决定</td></tr>
 </tbody></table></div>
 <p class="muted">数字是用 nanolize 自己的统计函数在实验用的原版上量的。实验里这四个文件都带了过去。</p>
-<div class="note"><strong>一个没有解决的情况。</strong><code>builtin_meta.py</code> 这类文件一半是数据、一半是函数。不带，作者同样写不出里面的类别表；带，里面的函数就原样照搬。新规则把这个决定留给启动作业的一方，见<a href="#decide">待确认</a>第 3 项。</div>
+<div class="note"><strong>半数据、半代码的文件。</strong><code>builtin_meta.py</code> 这类文件不会自动带，由启动作业的一方按技能文档里的规则判断：数据是用户依赖的表就带。它里面是数据集的类别表，按这条规则会带过去，代价是文件里的几个函数也原样照搬、不重写。</div>
 
 <h2 id="c3">改动 3　无人值守成为默认</h2>
 <div class="change">
@@ -234,6 +234,7 @@ td .pill { margin-left: 2px; }
 <pre><code>作者            python -m nanolize.runners.claude_author     --settings 设置文件
 控制器          python -m nanolize.runners.claude_controller --settings 设置文件 {result_path} {schema_path}
 写事实和补测试  python -m nanolize.runners.claude_role       --settings 设置文件 {result_path} {schema_path}</code></pre>
+  <p>三种会话默认都在沙箱里运行：只有自己的工作区可写，设置里列出的目录不可见。实验里写事实和补测试的会话没有进沙箱，“不改现有文件、不联网”只靠提示词约束；现在改成默认进。跑测试的解释器在工作区之外，通过 <code>expose</code> 只读挂进来。要关掉沙箱，必须在设置里显式写 <code>"sandbox": "none"</code>，这一点会记进每次调用的记录。机器上没有沙箱程序又没有显式关掉时，适配器拒绝启动并说明原因。</p>
   <p>nanolize 的代码认不出一个自写的作者脚本背后是不是 Claude，所以这一层不做“自动选用”。自动选用放在入口那一层做，见<a href="#c7">改动 7</a>。</p></div></div>
 </div>
 
@@ -337,11 +338,23 @@ td .pill { margin-left: 2px; }
   <div class="row"><span class="tag why">原因</span><div><p>你之前问过，为什么不能让作业里的 agent 直接和启动它的 agent 是同一种。在 nanolize 的代码里做不到，因为它只看得到一条启动命令；放在入口这一层就能做到，因为启动的 agent 知道自己是谁。</p></div></div>
   <div class="row"><span class="tag data">待定</span><div><p>按技能文档的描述，入口准备的测试环境只装第三方依赖，目标项目是从检出目录导入的，所以它可以直接给作者用。这一点要在实现时用一个真实项目确认；这次实验没有这样做，是自己另外准备的依赖目录。</p></div></div>
 </div>
-<div class="note"><strong>提交那一步没有变。</strong>入口的流程仍然是：agent 把范围选择页面准备好，等人确认范围并点“提交并开始”。技能文档明确写着不替用户点提交。要不要让 agent 自己提交，见<a href="#decide">待确认</a>第 5 项。</div>
+<div class="note"><strong>提交那一步默认不变。</strong>不带别的选项时，agent 把范围选择页面准备好，等人确认范围并点“提交并开始”。带 <code>unattended=on</code> 时由 agent 自己提交，见<a href="#c8">改动 8</a>。</div>
 
-<h2 id="c8">改动 8　出错时怎么处理写进技能文档</h2>
+<h2 id="c8">改动 8　无人值守选项：agent 自己提交，出错时按规则处理</h2>
 <div class="change">
-  <h3>无人值守时的规则</h3>
+  <h3>入口加 <code>unattended=on</code></h3>
+  <div class="row"><span class="tag now">现状</span><div><p>入口的流程会停一次：agent 把范围选择页面准备好，然后等人确认范围并点“提交并开始”，技能文档明确写着不替用户点提交。除了页面，也没有别的提交入口：命令行和 MCP 工具里都没有“提交”这一项。这次实验是自己写了一个启动脚本，直接调用 nanolize 内部的提交方法。</p></div></div>
+  <div class="row"><span class="tag new">改成</span><div>
+    <ul>
+      <li>入口加选项 <code>unattended=on</code>。带上它，agent 按 <code>scope</code> 给定的范围自己提交，不等人。</li>
+      <li>新增一个提交工具（MCP 和命令行各一个），对已经准备好的评审按给定的范围提交。它包的是 nanolize 已有的提交方法，不新增提交逻辑。</li>
+      <li>技能文档里“这条命令授权了什么”一节写明：带这个选项，就等于授权 agent 提交并开始花钱。</li>
+      <li>不带这个选项时一切照旧：等人在页面上确认范围并点提交。</li>
+    </ul></div></div>
+  <div class="row"><span class="tag why">原因</span><div><p>做成选项而不是默认：点提交就开始花钱，默认流程里人确认范围的那一步是为此设的。做成选项后，命令里只多一个词。</p></div></div>
+</div>
+<div class="change">
+  <h3>无人值守时的规则写进技能文档</h3>
   <div class="row"><span class="tag now">现状</span><div><p>技能文档对出错的默认要求是相反的：准备阶段遇到挡路的问题，记下来、停下、问用户；作业开始后，除非用户要求，不取消、不恢复、不清理作业。所以这次实验要靠 prompt 里的一整段话来改变 agent 的做法。</p></div></div>
   <div class="row"><span class="tag new">改成</span><div>
     <p>技能文档加一节“无人值守时”，内容就是 prompt 里原来那段话：</p>
@@ -351,7 +364,7 @@ td .pill { margin-left: 2px; }
       <li>需要改 nanolize 代码时，在本地另开分支，每个绕过单独一个提交，不往上游分支推送。</li>
       <li>不靠关掉检查或放宽验收标准来绕。实在只能这样时也继续跑完，但要在 <code>issues.md</code> 和最后的汇报里明确标出放宽了哪一项。</li>
     </ul></div></div>
-  <div class="row"><span class="tag data">触发</span><div><p>用户在 prompt 里说明这次无人值守时适用，一句话即可。没有说明时，仍按现在的默认做法：停下来问。如果待确认第 5 项选了加选项，就改由那个选项触发。</p></div></div>
+  <div class="row"><span class="tag data">触发</span><div><p>带 <code>unattended=on</code> 时适用。不带时仍按现在的默认做法：停下来问。运行器试调不通的情况例外，那种情况一律自己修，见<a href="#c6">改动 6</a>。</p></div></div>
   <div class="row"><span class="tag why">原因</span><div><p>这段规则不放进 nanolize 的提示词目录。那里的提示词是给作业内部的角色用的（作者、控制器、写事实、设计测试），它们在沙箱里工作，改不了 nanolize 的代码，也没法重新启动作业。这段话是说给启动作业的 agent 听的，它读的是技能文档。</p></div></div>
 </div>
 
@@ -360,12 +373,12 @@ td .pill { margin-left: 2px; }
 <thead><tr><th>文件</th><th>改什么</th><th>改动</th></tr></thead>
 <tbody>
 <tr><td><code>skills/simplify-code/SKILL.md</code></td><td>默认步骤改成新格式；加转换报告处理规则；加 Claude 适配器的用法</td><td>1、2、4</td></tr>
-<tr><td><code>skills/nanolize/SKILL.md</code>、<code>skills/nanolize-run/SKILL.md</code></td><td>入口加 <code>agent</code> 选项；文字对 Codex 和 Claude Code 都成立；怎么写适配器设置文件；提交前试调、不通时自己修好再继续；“无人值守时”一节；默认步骤里加转换</td><td>1、6、7、8</td></tr>
+<tr><td><code>skills/nanolize/SKILL.md</code>、<code>skills/nanolize-run/SKILL.md</code></td><td>入口加 <code>agent</code> 和 <code>unattended</code> 两个选项；“这条命令授权了什么”一节；文字对 Codex 和 Claude Code 都成立；怎么写适配器设置文件；提交前试调、不通时自己修好再继续；“无人值守时”一节；默认步骤里加转换</td><td>1、6、7、8</td></tr>
 <tr><td><code>README.md</code>、<code>README.zh-CN.md</code></td><td>默认步骤；中文版现在完全没有提到转换，要补上</td><td>1</td></tr>
 <tr><td><code>docs/graph-rewrite.md</code> 和技能目录下的同一份</td><td>“准备清单”一节的步骤顺序；“不点名就不带”那句；运行器一节；两处缺配置时的行为</td><td>1、2、4、5</td></tr>
 <tr><td><code>docs/job-tools.md</code></td><td><code>owner_attends</code> 的默认值；控制器运行器的写法</td><td>3、4</td></tr>
-<tr><td><code>src/nanolize/cli.py</code></td><td><code>contract-propose --no-carry</code>；旧格式清单的提示；跳过试调的开关和单独的试调命令；帮助文字</td><td>1、2、3、6</td></tr>
-<tr><td><code>src/nanolize/mcp_server.py</code></td><td>新增转换工具；帮助文字</td><td>1、3</td></tr>
+<tr><td><code>src/nanolize/cli.py</code></td><td><code>contract-propose --no-carry</code>；旧格式清单的提示；跳过试调的开关和单独的试调命令；提交命令；帮助文字</td><td>1、2、3、6、8</td></tr>
+<tr><td><code>src/nanolize/mcp_server.py</code></td><td>新增转换工具、试调工具和提交工具；帮助文字</td><td>1、3、6、8</td></tr>
 <tr><td><code>src/nanolize/graph_contract.py</code></td><td>转换时自动带；报告新增 <code>carried</code>；候选文件附数据占比</td><td>2</td></tr>
 <tr><td><code>src/nanolize/code_quality.py</code></td><td>新增“自动带”的门槛常量（0.9）；原有的 0.5 继续作为“列为候选”的门槛</td><td>2</td></tr>
 <tr><td><code>src/nanolize/public_view.py</code></td><td>页面数据里加“带了几个文件、多少 token 不计入体积”</td><td>2</td></tr>
@@ -379,23 +392,23 @@ td .pill { margin-left: 2px; }
 <p class="muted">不用改的：<code>job_tools/manage.py</code> 里判断“是否有人值守”的规则，<code>capabilities.py</code> 里对被带文件的校验，以及打包配置（新目录会被自动发现）。</p>
 
 <h2 id="prompt">改完后的 prompt</h2>
-<p>八处都做完之后，一行命令加两句话。从 Claude Code 启动时 <code>agent=claude</code> 可以不写：</p>
-<pre><code>$nanolize 【仓库目录】 scope=all model=【模型名】 --cn
+<p>八处都做完之后，一行命令加一句汇报要求。从 Claude Code 启动时 <code>agent=claude</code> 可以不写：</p>
+<pre><code>$nanolize 【仓库目录】 scope=all model=【模型名】 unattended=on --cn
 
-这次无人值守，提交之后不要停下来等我。
 跑完给我一个公开、不需要登录的报告网站，写明体积比例、与原版相同的行比例、测试设计的结果、
 防默写的记录、花费和耗时，以及 issues.md 里每个问题的简要列表。</code></pre>
-<p>这样写的话，全程只需要你做一件事：范围选择页面准备好之后，在页面上点一次“提交并开始”。待确认第 5 项如果选了加选项，命令里多写一个 <code>unattended=on</code>，这一次点击也省掉，“这次无人值守”那句话也不用写。</p>
+<p>这样写，全程不需要你操作。想在提交前自己确认范围时，去掉 <code>unattended=on</code>：agent 会把范围选择页面准备好，等你点“提交并开始”。</p>
 
-<h2 id="decide">待你确认的五项</h2>
+<h2 id="decide">已定的取舍</h2>
+<p>原来列为待确认的五项，都已按建议定下来，并且写进了上面对应的改动。</p>
 <div class="table wide"><table>
-<thead><tr><th>事项</th><th>可选做法</th><th>建议</th></tr></thead>
+<thead><tr><th>事项</th><th>定下的做法</th><th>理由</th><th>写在</th></tr></thead>
 <tbody>
-<tr><td>1. 旧格式清单进 <code>plan</code> / <code>review</code> 时</td><td>只提示；或者没有显式开关就拒绝</td><td>只提示。拒绝会让现有的脚本和测试立刻失效，而转换目前只读 Python 源码</td></tr>
-<tr><td>2. 写事实和补测试的 Claude 会话默认进不进沙箱</td><td>默认进，显式写 <code>"sandbox": "none"</code> 才关；或者沿用实验里的做法，默认不进</td><td>默认进，和作者、控制器一致。实验里这类会话没进沙箱，“不改现有文件、不联网”只靠提示词约束。默认进沙箱要多做一次真实调用确认，因为跑测试的解释器在工作区之外，要靠 <code>expose</code> 挂进来</td></tr>
-<tr><td>3. 数据占比 50% 到 90% 的文件</td><td>只列不带，由启动的一方按规则判断；或者把自动带的门槛降低</td><td>只列不带，判断规则写进技能文档：数据是用户依赖的表就带。门槛降到 50% 会把半个文件的代码原样照搬</td></tr>
-<tr><td>4. 评审页面上要不要加“有人值守”的勾选</td><td>加；或者只在策略里设</td><td>先不加。在页面上提交的人如果要等，在策略里写一次即可；需要的人多了再加</td></tr>
-<tr><td>5. 提交那一步要不要也省掉</td><td>保持现状，人在页面上点一次；或者加 <code>unattended=on</code> 选项，带上它 agent 就按给定范围自己提交；或者默认就不等人</td><td>加选项。点提交就开始花钱，默认流程里人确认范围的那一步是为此设的，不宜默认去掉；做成选项后命令里只多一个词。这一项这一版没有列进改动</td></tr>
+<tr><td>1. 旧格式清单进 <code>plan</code> / <code>review</code> 时</td><td>只提示，不拒绝</td><td>拒绝会让现有的脚本和测试立刻失效，而转换目前只读 Python 源码</td><td>改动 1</td></tr>
+<tr><td>2. 写事实和补测试的 Claude 会话进不进沙箱</td><td>默认进，和作者、控制器一致；显式写 <code>"sandbox": "none"</code> 才关</td><td>实验里这类会话没进沙箱，“不改现有文件、不联网”只靠提示词约束。自带的适配器至少要和默认的 codex 运行器一样，限制只能写工作区</td><td>改动 4</td></tr>
+<tr><td>3. 数据占比 50% 到 90% 的文件</td><td>只列不带，由启动的一方按规则判断：数据是用户依赖的表就带</td><td>门槛降到 50% 会把半个文件的代码原样照搬</td><td>改动 1、2</td></tr>
+<tr><td>4. 评审页面上的“有人值守”勾选</td><td>先不加，要等人回答的在策略里写一次</td><td>需要的人多了再加</td><td>改动 3</td></tr>
+<tr><td>5. 提交那一步要不要也省掉</td><td>加 <code>unattended=on</code> 选项，带上它由 agent 自己提交；默认仍等人点提交</td><td>点提交就开始花钱，默认流程里人确认范围的那一步不宜默认去掉</td><td>改动 8</td></tr>
 </tbody></table></div>
 
 <h2 id="plan">实施与验证</h2>
@@ -408,7 +421,7 @@ td .pill { margin-left: 2px; }
 <ul>
   <li>每处改动配回归测试。改了提示词之后，重新生成两份派生文件并跑提示词检查。</li>
   <li>全量测试交给仓库的 CI：Python 3.11 和 3.13、打包检查、JS 测试。同一台机器上有付费作业在跑时，不在本机跑全量测试，以免抢它的 CPU。</li>
-  <li>Claude 适配器除了用假程序测之外，还需要真实调用确认，三种角色各一次小调用。这一步花钱，要你同意后才做；实验里同类的一次调用是 21 秒、0.11 美元。</li>
+  <li>Claude 适配器除了用假程序测之外，还需要真实调用确认，三种角色各一次小调用；其中写事实和补测试的会话默认进沙箱是这次新定的，实验里没有这样跑过，要专门确认一次。这一步花钱，要你同意后才做；实验里同类的一次调用是 21 秒、0.11 美元。</li>
 </ul>
 <h3>现在还不知道的</h3>
 <ul>
