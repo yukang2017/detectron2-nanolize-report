@@ -98,7 +98,7 @@ td .pill { margin-left: 2px; }
 <header>
   <h1>nanolize 默认设置修改方案（第二版）</h1>
   <p class="meta">2026-11-14 · 基于 <code>main</code>（<code>fe9b3bb</code>）· 这是修改方案，代码还没有改 · <a href="../default-settings/">第一版</a></p>
-  <nav><a href="#summary">结论</a><a href="#map">逐条对照</a><a href="#c1">新格式流程</a><a href="#c2">数据文件</a><a href="#c3">无人值守</a><a href="#c4">Claude 适配器</a><a href="#c5">漏配即拒绝</a><a href="#c6">启动时试调</a><a href="#c7">入口支持 Claude</a><a href="#c8">出错时的规则</a><a href="#files">涉及的文件</a><a href="#prompt">改完后的 prompt</a><a href="#decide">待确认</a><a href="#plan">实施与验证</a></nav>
+  <nav><a href="#summary">结论</a><a href="#map">逐条对照</a><a href="#c1">新格式流程</a><a href="#c2">数据文件</a><a href="#c3">无人值守</a><a href="#c4">Claude 适配器</a><a href="#c5">漏配即拒绝</a><a href="#c6">试调运行器</a><a href="#c7">入口支持 Claude</a><a href="#c8">出错时的规则</a><a href="#files">涉及的文件</a><a href="#prompt">改完后的 prompt</a><a href="#decide">待确认</a><a href="#plan">实施与验证</a></nav>
 </header>
 
 <p class="lead">这次 detectron2 实验的启动 prompt 有 40 多行，其中十几条是靠人逐条写明的设置。这一页说明怎样把它们变成 nanolize 的默认行为，让以后的 prompt 只需要写项目、范围、用什么模型和汇报要求，最短可以是一行命令。“范围”按要求不动。</p>
@@ -117,7 +117,7 @@ td .pill { margin-left: 2px; }
   <li><strong>无人值守成为默认。</strong><code>owner_attends</code> 的默认值改成 <code>false</code>。已经保存的作业行为不变。</li>
   <li><strong>nanolize 自带三个 Claude 适配器。</strong>作者、控制器、写事实和补测试各一个，文件名和文档都标明只用于 Claude Code。原脚本里写死的模型、目录、提示词前缀、依赖环境，全部改成从一个设置文件读，这个文件由启动作业的 agent 写。</li>
   <li><strong>漏配置时提交即拒绝。</strong>新格式清单下，作者不是 codex 又没给写事实和补测试的运行器，或者没有可用的单文件测试命令，提交时直接报错并写明要给什么，不再悄悄跳过。</li>
-  <li><strong>作业启动时自动试调运行器。</strong>对每个不是内置 codex 命令的运行器做一次很小的真实调用，不通就在这一步停下，不用等到几小时后才发现。</li>
+  <li><strong>试调运行器，不通就自己修好接着跑。</strong>对每个不是内置 codex 命令的运行器做一次很小的真实调用，提交前一次，作业启动时再一次。不通时由启动作业的 agent 自己修好再继续，不停下来等人。</li>
   <li><strong><code>$nanolize &lt;目录&gt;</code> 支持 Claude。</strong>现有的一行入口只会用 codex。改完后它可以由 Claude Code 来启动，作业里的作者、控制器、写事实和补测试也可以用 Claude；不写明时，作业用的 agent 和启动它的 agent 是同一种。</li>
   <li><strong>出错时怎么处理写进技能文档。</strong>“遇到错误自己绕过并记录、不靠放宽验收来绕”这段话从 prompt 挪进技能文档，作为无人值守时的规则。</li>
 </ol>
@@ -147,7 +147,7 @@ td .pill { margin-left: 2px; }
 <tr><td><code>owner_attends: false</code></td><td>默认 <code>true</code></td><td>默认 <code>false</code> <span class="pill good">改动 3</span></td></tr>
 <tr><td>目标是完整跑完，中途不要停下来等我</td><td>会停两处：作业可能为提问而暂停；一行入口的流程等人在页面上点提交</td><td>作业自己不再停下来等人 <span class="pill good">改动 3</span>。提交那一步仍要人点一次，要不要省掉见待确认第 5 项。prompt 里留一句“无人值守”</td></tr>
 <tr><td>遇到错误自己绕过并记录，不靠放宽验收来绕</td><td>写在 prompt 里</td><td>写进技能文档，作为无人值守时的规则 <span class="pill good">改动 8</span></td></tr>
-<tr><td>启动前用一次小的真实调用确认运行器能用</td><td>prompt 里没写，这次是 agent 自己做的</td><td>作业启动时自动做 <span class="pill good">改动 6</span></td></tr>
+<tr><td>启动前用一次小的真实调用确认运行器能用</td><td>prompt 里没写，这次是 agent 自己做的</td><td>提交前由 agent 试调，作业启动时再自动做一次；不通就自己修好接着跑 <span class="pill good">改动 6</span></td></tr>
 <tr><td>汇报哪些数字、出公开网页</td><td>写在 prompt 里</td><td>留在 prompt 里。默认流程自带的报告是否已经包含这些数字，没有核对</td></tr>
 </tbody></table></div>
 <p class="muted"><code>test_template</code> 没法设默认，是因为 nanolize 不知道哪个解释器里装着项目的依赖。安装检查用的那个解释器只用来建全新的环境，不能拿来跑测试。</p>
@@ -294,18 +294,22 @@ td .pill { margin-left: 2px; }
   <div class="row"><span class="tag data">兼容</span><div><p>两条都只对新格式清单生效。旧格式清单保持现在的行为（跳过并留事件），不影响已有的用法。</p></div></div>
 </div>
 
-<h2 id="c6">改动 6　作业启动时自动试调运行器</h2>
+<h2 id="c6">改动 6　试调运行器，不通就自己修好接着跑</h2>
 <div class="change">
-  <h3>运行器不通，在第一步就停下</h3>
+  <h3>试调两次，哪一次不通都不停下来等人</h3>
   <div class="row"><span class="tag now">现状</span><div><p>nanolize 不会事先检查运行器能不能用，坏了要到第一次真正调用时才暴露。作者的运行器要等冻结全部做完才第一次被调用：这次 detectron2 实验启动七个多小时后，作者还一次都没被调用过。现有的诊断工具只看依赖和程序在不在，不发起真实调用。</p></div></div>
   <div class="row"><span class="tag new">改成</span><div>
     <ul>
-      <li>作业启动后的第一步，对每个不是内置 codex 命令的运行器做一次很小的真实调用：作者、控制器、写事实和补测试各一次。</li>
-      <li>每次检查三件事：会话能启动；答案按要求的格式回来；用量被报告。</li>
-      <li>任何一个不通，作业在这一步停下，把适配器的报错写进事件。</li>
-      <li>加一个跳过的开关，另外提供一条单独的命令，写完设置文件后可以先手动试一次。</li>
+      <li>试调做两次。第一次在提交之前，由启动作业的 agent 用一条单独的命令做。第二次在作业启动后的第一步自动做，作为兜底。</li>
+      <li>每次对作者、控制器、写事实和补测试各做一次很小的真实调用，检查三件事：会话能启动；答案按要求的格式回来；用量被报告。</li>
+      <li><strong>提交前不通：</strong>agent 看适配器的报错，自己修（设置文件、环境或适配器本身），重新试，直到通过再提交。</li>
+      <li><strong>作业启动时不通：</strong>作业不算失败，停在这一步等恢复，报错写进事件。agent 修好之后恢复作业，作业重新试调，通过后接着往下跑。这是作业的第一步，之前没有任何工作会丢。</li>
+      <li>每次修了什么，都记进工作目录下的 <code>issues.md</code>。</li>
     </ul></div></div>
-  <div class="row"><span class="tag why">花费</span><div><p>三次小调用。实验里同类的一次调用是 21 秒、0.11 美元，和整个作业相比可以忽略。</p></div></div>
+  <div class="row"><span class="tag why">原因</span><div><p>修了就能接着跑，是因为适配器每次调用都重新读设置文件。改设置文件不用动作业已经定下来的启动命令，也不用重新建作业。</p></div></div>
+  <div class="row"><span class="tag data">适用</span><div><p>不看这次有没有说明无人值守，一律如此。运行器起不来是启动这一方自己的配置问题，停下来问人没有帮助。技能文档里现有的“作业开始后，除非用户要求，不恢复作业”这一条，为这种情况写明例外。</p></div></div>
+  <div class="row"><span class="tag data">例外</span><div><p>只有一种情况修不了：缺的是只有人才能提供的东西，例如登录凭据。这时没有别的工作可以先做，agent 把原因记下来并告诉你。</p></div></div>
+  <div class="row"><span class="tag why">花费</span><div><p>每轮三次小调用。实验里同类的一次调用是 21 秒、0.11 美元，和整个作业相比可以忽略。</p></div></div>
   <div class="row"><span class="tag data">范围</span><div><p>只对自己给出的运行器做。内置的 codex 命令保持现在的行为，不额外试调。作者的试调在一个临时的空工作区里做，不碰真正的写作目录。</p></div></div>
 </div>
 
@@ -356,7 +360,7 @@ td .pill { margin-left: 2px; }
 <thead><tr><th>文件</th><th>改什么</th><th>改动</th></tr></thead>
 <tbody>
 <tr><td><code>skills/simplify-code/SKILL.md</code></td><td>默认步骤改成新格式；加转换报告处理规则；加 Claude 适配器的用法</td><td>1、2、4</td></tr>
-<tr><td><code>skills/nanolize/SKILL.md</code>、<code>skills/nanolize-run/SKILL.md</code></td><td>入口加 <code>agent</code> 选项；文字对 Codex 和 Claude Code 都成立；怎么写适配器设置文件；“无人值守时”一节；默认步骤里加转换</td><td>1、7、8</td></tr>
+<tr><td><code>skills/nanolize/SKILL.md</code>、<code>skills/nanolize-run/SKILL.md</code></td><td>入口加 <code>agent</code> 选项；文字对 Codex 和 Claude Code 都成立；怎么写适配器设置文件；提交前试调、不通时自己修好再继续；“无人值守时”一节；默认步骤里加转换</td><td>1、6、7、8</td></tr>
 <tr><td><code>README.md</code>、<code>README.zh-CN.md</code></td><td>默认步骤；中文版现在完全没有提到转换，要补上</td><td>1</td></tr>
 <tr><td><code>docs/graph-rewrite.md</code> 和技能目录下的同一份</td><td>“准备清单”一节的步骤顺序；“不点名就不带”那句；运行器一节；两处缺配置时的行为</td><td>1、2、4、5</td></tr>
 <tr><td><code>docs/job-tools.md</code></td><td><code>owner_attends</code> 的默认值；控制器运行器的写法</td><td>3、4</td></tr>
@@ -366,7 +370,7 @@ td .pill { margin-left: 2px; }
 <tr><td><code>src/nanolize/code_quality.py</code></td><td>新增“自动带”的门槛常量（0.9）；原有的 0.5 继续作为“列为候选”的门槛</td><td>2</td></tr>
 <tr><td><code>src/nanolize/public_view.py</code></td><td>页面数据里加“带了几个文件、多少 token 不计入体积”</td><td>2</td></tr>
 <tr><td><code>src/nanolize/strategies/controller.py</code></td><td>默认值；每轮上下文始终写出这个字段</td><td>3</td></tr>
-<tr><td><code>src/nanolize/execution.py</code></td><td>暂停时的提示文字；提交时的两条拒绝；启动时试调运行器</td><td>3、5、6</td></tr>
+<tr><td><code>src/nanolize/execution.py</code></td><td>暂停时的提示文字；提交时的两条拒绝；启动时试调运行器，不通时停在可以恢复的状态</td><td>3、5、6</td></tr>
 <tr><td><code>src/nanolize/prompts/prompts.json</code></td><td>控制器提示词里讲无人值守的那一句；改后重新生成 <code>docs/prompts.md</code> 和 <code>tests/prompt_views.json</code></td><td>3</td></tr>
 <tr><td><code>src/nanolize/runners/</code>（新）</td><td>三个 Claude 适配器和共用模块</td><td>4</td></tr>
 <tr><td><code>scripts/distribution_probe.py</code></td><td>确认安装后的包里有适配器模块</td><td>4</td></tr>
@@ -410,6 +414,7 @@ td .pill { margin-left: 2px; }
 <ul>
   <li>这些改动在真实项目上的整体效果，要等下一次完整运行才能确认。</li>
   <li>非 Python 项目走新的默认流程时转换会得到什么，没有核实。</li>
+  <li>作业停在试调这一步之后再恢复，现有的暂停和恢复机制能不能直接用，要在实现时确认。</li>
   <li>一行入口依赖 nanolize 的 MCP 工具。这次实验没有走这条路，用的是命令行和自己写的脚本；一行入口在实验所用的环境里能不能直接用、在 Claude Code 里调用是否顺利，都没有核实。</li>
   <li>Claude 命令行的参数和事件流格式以后可能变。适配器遇到读不懂的输出要报错，不能当作成功；这一点会写进测试。</li>
   <li>正在进行的 detectron2 实验已经跑过写事实和第一轮补测试，作者还没有开始。作者和控制器的适配器脚本在这次运行里的表现要等它跑完再看，收进 nanolize 时以跑完后的最终版本为准。</li>
