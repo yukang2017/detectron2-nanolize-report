@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tqdm 压缩运行报告：Claude Code 插件，全部功能，无人值守</title>
+<meta name="description" content="用 nanolize 的 Claude Code 插件对 tqdm 做一次全部功能范围的无人值守压缩运行：转换报告、体积、与原版相同的行、测试设计、防默写、花费和耗时、问题清单。">
+<style>
+:root {
+  --bg: #fbfaf7; --surface: #ffffff; --ink: #1d1c1a; --muted: #625f58; --line: #e2ded5;
+  --accent: #1f5f8b; --accent-soft: #e7f0f6; --good: #2c6e49; --good-soft: #e6f2ea;
+  --warn: #9a5b13; --warn-soft: #faf0df; --now: #7a3b3b; --now-soft: #f7eaea;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17171a; --surface: #1f2024; --ink: #ecebe7; --muted: #a9a69e; --line: #34353b;
+    --accent: #8cc0e3; --accent-soft: #1d2f3d; --good: #8fd0a8; --good-soft: #1c3226;
+    --warn: #e6b56a; --warn-soft: #3a2e19; --now: #e3a3a3; --now-soft: #3a2424;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17171a; --surface: #1f2024; --ink: #ecebe7; --muted: #a9a69e; --line: #34353b;
+  --accent: #8cc0e3; --accent-soft: #1d2f3d; --good: #8fd0a8; --good-soft: #1c3226;
+  --warn: #e6b56a; --warn-soft: #3a2e19; --now: #e3a3a3; --now-soft: #3a2424;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+        "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+}
+main { max-width: 920px; margin: 0 auto; padding: 40px 16px 80px; }
+header { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 28px; }
+h1 { font-size: 30px; line-height: 1.3; margin: 0 0 8px; letter-spacing: .01em; }
+.meta { color: var(--muted); font-size: 14px; margin: 0; }
+h2 { font-size: 22px; line-height: 1.4; margin: 52px 0 12px; padding-top: 8px; }
+h3 { font-size: 17px; margin: 28px 0 8px; }
+h3.group { font-size: 18px; margin: 36px 0 4px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+p { margin: 10px 0; }
+ul, ol { margin: 8px 0; padding-left: 1.4em; }
+li { margin: 4px 0; }
+a { color: var(--accent); }
+code { font: 13.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+       background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.lead { font-size: 17px; }
+nav { font-size: 14.5px; margin: 18px 0 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 18px 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.card .n { font-size: 13px; color: var(--accent); font-weight: 600; letter-spacing: .04em; }
+.card .big { font-size: 28px; font-weight: 650; line-height: 1.3; margin: 2px 0; font-variant-numeric: tabular-nums; }
+.card p { margin: 0; font-size: 14.5px; color: var(--muted); line-height: 1.65; }
+.table { overflow-x: auto; margin: 14px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; background: var(--accent-soft); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.change { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px 18px 12px; margin: 14px 0; }
+.change h3 { font-size: 17px; margin: 14px 0 2px; line-height: 1.5; }
+.change .id { color: var(--accent); font-weight: 700; margin-right: 4px; }
+.where { color: var(--muted); font-size: 14px; margin: 0 0 6px; }
+.row { display: grid; grid-template-columns: 56px 1fr; gap: 6px 14px; padding: 9px 0; border-top: 1px dashed var(--line); }
+.row > div > p { margin: 0; font-size: 15px; }
+.tag { font-size: 13px; font-weight: 600; border-radius: 6px; padding: 2px 8px; height: fit-content; width: fit-content; white-space: nowrap; }
+.tag.now { color: var(--now); background: var(--now-soft); }
+.tag.new { color: var(--accent); background: var(--accent-soft); }
+.tag.why { color: var(--good); background: var(--good-soft); }
+.tag.data { color: var(--warn); background: var(--warn-soft); }
+.pill { font-size: 12.5px; font-weight: 600; border-radius: 20px; padding: 1px 9px; white-space: nowrap; vertical-align: 1px; }
+.pill.good { color: var(--good); background: var(--good-soft); }
+.pill.warn { color: var(--warn); background: var(--warn-soft); }
+.pill.now { color: var(--now); background: var(--now-soft); }
+.note { background: var(--warn-soft); border-left: 3px solid var(--warn); border-radius: 0 8px 8px 0; padding: 10px 14px; margin: 14px 0; font-size: 15px; }
+.muted { color: var(--muted); }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+@media (max-width: 560px) {
+  h1 { font-size: 24px; } h2 { font-size: 20px; }
+  .row { grid-template-columns: 1fr; }
+  th, td { padding: 8px 10px; }
+  table { min-width: 560px; }
+  .wide table { min-width: 860px; }
+}
+
+pre { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+      overflow-x: auto; margin: 12px 0; line-height: 1.6; font-size: 13px; }
+pre code { background: none; padding: 0; font: 13px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+           overflow-wrap: normal; white-space: pre; }
+.row > div { min-width: 0; }
+.row > div > ul { margin: 0; font-size: 15px; }
+ol > li { margin: 8px 0; }
+h3 .pill { margin-left: 6px; }
+</style>
+</head>
+<body>
+<main>
+<header><h1>tqdm 压缩运行报告：Claude Code 插件，全部功能，无人值守</h1><p class="meta">2026-11-15 · nanolize 分支 <code>claude/design-speed-claude-code-plugin</code>（提交 <code>447fa47</code>）· 目标 tqdm（提交 <code>9cf5a12</code>）· 启动命令 <code>/nanolize:nanolize tqdm unattended=on scope=all --cn</code></p><nav><a href="#summary">结论</a><a href="#setup">运行配置</a><a href="#convert">转换报告</a><a href="#size">体积</a><a href="#overlap">相同的行与防默写</a><a href="#tests">测试事实与测试设计</a><a href="#verify">行为验证</a><a href="#cost">花费和耗时</a><a href="#issues">问题清单</a><a href="#limits">没有验证的</a></nav></header>
+<p class="lead">这次运行从 Claude Code 里输入一行命令开始，由插件走完全部流程，中途没有人介入。作业里的所有角色（作者、controller、测试事实的编写和审阅、测试的设计和审阅）都用模型 <code>claude-fable-5-2</code>、effort <code>xhigh</code>，这是该分支的默认值。这是第一次在 xhigh 下跑完整作业。</p>
+<div class="cards"><div class="card"><div class="n">结束状态</div><div class="big">带缺口交付</div><p>候选通过了全部 46 组检查和 3 项安装检查，但行为验收没有成立</p></div><div class="card"><div class="n">体积</div><div class="big">41.65%</div><p>28,385 / 68,151 个 token，达到 50% 的目标</p></div><div class="card"><div class="n">与原版相同的行</div><div class="big">36%</div><p>上限 40%；初稿是 61%，被退回重写过一次</p></div><div class="card"><div class="n">花费</div><div class="big">167.26 美元</div><p>62 次模型调用；不含启动对话本身</p></div><div class="card"><div class="n">耗时</div><div class="big">3 小时 35 分</div><p>准备 18 分钟，作业 3 小时 17 分钟</p></div></div>
+<h2 id="summary">结论</h2><ul><li><strong>交付了，但带缺口。</strong> 候选代码在两次全量对比里 46 组检查全部通过，全新环境里的 3 项安装检查也通过。作业仍然不声明“行为完整保留”，原因是两件事：一个原版测试在冻结基线时在原版代码上失败；两个能力（<code>auto</code> 和 <code>contrib-concurrent</code>）没有任何检查。</li><li><strong>体积达到目标。</strong> 总 token 降到原版的 41.65%。降幅主要来自文档字符串、注释和非 Python 文件；Python 代码本身保留了 72%。</li><li><strong>防默写检查起了作用。</strong> 作者的初稿有 61% 的行与公开的原版相同，保存被拒绝，34 个文件各被退回重写一次。重写后是 36%，低于 40% 的上限。</li><li><strong>xhigh 让冻结阶段又贵又慢，并直接造成了一个缺口。</strong> 冻结阶段（写事实、补测试、录基线）用了 77 分钟，其中写事实和补测试的会话花了 102.79 美元。一个测试审阅会话撞上 855 秒的时限，它负责的 8 个测试文件全部作废，其中 7 个属于后来没有检查的那两个能力。</li><li><strong>问题清单共 11 条</strong>：4 条需要改 nanolize，7 条是遇到的现象。见“问题清单”一节。</li></ul>
+<h2 id="setup">运行配置</h2><div class="table wide"><table><thead><tr><th>项目</th><th>这次运行</th></tr></thead><tbody><tr><td>nanolize 代码</td><td>分支 <code>claude/design-speed-claude-code-plugin</code>，提交 <code>447fa47</code>，以 Claude Code 插件的方式安装</td></tr><tr><td>入口</td><td>在新开的 Claude Code 对话里输入 <code>/nanolize:nanolize tqdm unattended=on scope=all --cn</code></td></tr><tr><td>目标</td><td>tqdm 的 <code>master</code>，提交 <code>9cf5a12</code>，干净的克隆</td></tr><tr><td>范围</td><td>全部功能（<code>scope=all</code>）；目标体积是原版的 50%</td></tr><tr><td>模型和 effort</td><td>所有角色都是 <code>claude-fable-5-2</code>、<code>xhigh</code>（没有写 <code>model=</code> 和 <code>effort=</code>，用的是默认值）</td></tr><tr><td>运行器</td><td>Claude Code 适配器，会话在 bubblewrap 沙箱里；本机上其他的 tqdm 副本和以前的重写结果都对会话隐藏</td></tr><tr><td>有人值守</td><td>否（<code>unattended=on</code>）：对话里的 agent 自己提交，出错自己绕过并记进 <code>issues.md</code></td></tr><tr><td>任务成本评估</td><td>未开启</td></tr><tr><td>检查在哪里跑</td><td>本机，没有用作业调度系统</td></tr></tbody></table></div>
+<h2 id="convert">转换报告里的数字</h2><p>清单转换工具最后一次调用返回的报告。对话随后审过清单，交给作业的清单有 35 个能力和 26 个保留的检查。</p><div class="table wide"><table><thead><tr><th>项目</th><th>数字</th></tr></thead><tbody><tr><td>对外能力（external）</td><td>25</td></tr><tr><td>内部能力（internal）</td><td>10</td></tr><tr><td>接口条目</td><td>249</td></tr><tr><td>读取的模块</td><td>43（没有读不了的）</td></tr><tr><td>保留的检查</td><td>26</td></tr><tr><td>排除的原版测试文件检查</td><td>6 个，因为用到了内部名称：<code>tests-tqdm</code>、<code>tests-synchronisation</code>、<code>tests-main</code>、<code>tests-auto</code>、<code>tests-concurrent</code>、<code>tests-contrib-logging</code></td></tr><tr><td>没有检查的对外能力</td><td>4</td></tr><tr><td>没有被检查到的内部能力</td><td>0</td></tr><tr><td>没有检视的检查</td><td>2</td></tr><tr><td>记成约定的检查</td><td>0</td></tr><tr><td>读不了的测试文件</td><td>0</td></tr><tr><td>解析不了的导出</td><td>0</td></tr><tr><td>丢弃的条目</td><td>0</td></tr><tr><td>原样携带的文件</td><td>0 个（0 token，0%）；没有携带候选</td></tr></tbody></table></div>
+<h2 id="size">体积</h2><div class="table wide"><table><thead><tr><th>项目</th><th class="num">原版</th><th class="num">交付</th><th class="num">保留比例</th></tr></thead><tbody><tr><td>总 token（源码加配置）</td><td class="num">68,151</td><td class="num">28,385</td><td class="num">41.65%</td></tr><tr><td>源码行</td><td class="num">5,608</td><td class="num">2,976</td><td class="num">53.07%</td></tr><tr><td>Python 代码 token</td><td class="num">31,396</td><td class="num">22,738</td><td class="num">72.4%</td></tr><tr><td>文档字符串 token</td><td class="num">9,872</td><td class="num">2,230</td><td class="num">22.6%</td></tr><tr><td>注释 token</td><td class="num">3,579</td><td class="num">1,042</td><td class="num">29.1%</td></tr><tr><td>非 Python 文件 token</td><td class="num">22,452</td><td class="num">2,134</td><td class="num">9.5%</td></tr><tr><td>Python 文件数</td><td class="num">47</td><td class="num">45</td><td class="num"></td></tr></tbody></table></div><p>目标是总 token 不超过原版的 50%（34,075 个），达到了。没有进入体积优化的轮次。</p>
+<h2 id="overlap">与原版相同的行和防默写记录</h2><div class="table wide"><table><thead><tr><th>项目</th><th>结果</th><th>说明</th></tr></thead><tbody><tr><td>最终交付</td><td>36%（比较了 1,483 行）</td><td>上限 40%，通过</td></tr><tr><td>单个函数</td><td>没有函数超过上限</td><td>单函数上限 60%</td></tr><tr><td>位于原版同一路径的文件</td><td>49 个文件，36.5% 的行没有变</td><td>作业自己的统计</td></tr><tr><td>作者的初稿</td><td>61%（比较了 1,618 行）</td><td>保存被拒绝，原因记为“复现了原版”</td></tr><tr><td>被退回的文件</td><td>34 个，各退回 1 次</td><td>包括 <code>tqdm/std.py</code>、<code>tqdm/cli.py</code>、<code>tqdm/notebook.py</code>、<code>tqdm/utils.py</code> 和 <code>examples/</code> 下的脚本</td></tr><tr><td>重写的代价</td><td>一次作者调用，52 分钟，26.04 美元</td><td>重写后一次通过</td></tr></tbody></table></div>
+<h2 id="tests">测试事实与测试设计</h2><div class="table wide"><table><thead><tr><th>项目</th><th>结果</th></tr></thead><tbody><tr><td>测试事实</td><td>为 13 个检查写了 172 条；审阅否决 5 条；没有测试缺事实</td></tr><tr><td>基线里的检查</td><td>46 组：26 个保留的检查加 20 个设计的测试</td></tr><tr><td>原版上的结果</td><td>45 组通过，1 组失败（<code>tests-pandas</code>，见“行为验证”）</td></tr><tr><td>有有效测试的叶子</td><td>26 个</td></tr><tr><td>需要补测试的叶子</td><td>10 个</td></tr><tr><td>补上测试的叶子</td><td>8 个，共接受 20 个测试：<code>tk</code> 4、<code>examples</code> 4、<code>keras</code> 3、<code>contrib-logging</code> 2、<code>gui</code> 2、<code>package</code> 2、<code>pandas</code> 2、<code>monitor</code> 1</td></tr><tr><td>被拒绝的测试提案</td><td>13 个：8 个因为审阅会话超时没有被审阅，4 个被审阅者否决（事实对原版不准确，或写的是测试代码而不是行为），1 个超出对外约定</td></tr><tr><td>仍然没有验证的叶子</td><td>2 个：<code>auto</code> 和 <code>contrib-concurrent</code></td></tr><tr><td>没有动态证据的叶子</td><td>3 个（<code>bells</code>、<code>deprecated-aliases</code>、<code>version</code>）：算有效，但没法通过剔除它们自己的源码来验证</td></tr></tbody></table></div>
+<h2 id="verify">行为验证</h2><div class="table wide"><table><thead><tr><th>项目</th><th>结果</th></tr></thead><tbody><tr><td>候选上的检查</td><td>46 组全部通过（其中 <code>tests-pandas</code> 在原版上失败、在候选上通过）</td></tr><tr><td>安装检查</td><td>3 / 3：全新环境里安装、导入、<code>python -m tqdm --help</code></td></tr><tr><td>能力</td><td>35 个里 28 个已验证，5 个部分验证，2 个未知，0 个失败</td></tr><tr><td>作业的结论</td><td>带缺口交付；不声明行为完整保留</td></tr></tbody></table></div><h3>三个缺口</h3><ul><li><strong>缺口一：一个原版测试在冻结基线时失败。</strong> <code>tests/tests_pandas.py</code> 里的 <code>test_pandas_leave</code> 在原版代码上失败（期望 <code>100/100</code>，得到 <code>99/99</code>）。这个检查因此不算验收标准，整次行为对比停在“未验证”。候选在这个检查上 8 个用例全部通过。启动对话在没有改动的原版上重跑了 78 次，全部通过，没能复现；这个测试用的是没有设种子的随机数，按它的写法大约每 230 次会失败一次。失败的原因没有查明。</li><li><strong>缺口二：两个能力没有任何检查。</strong> 4 个测试审阅会话里有 1 个在 855 秒的时限处被中止，它负责的 8 个测试文件全部作废，其中 3 个属于 <code>auto</code>，4 个属于 <code>contrib-concurrent</code>。没有第二次尝试。controller 把这两个能力记成未知，并让作者自查了一次，作者没有改任何文件；这不构成验证。</li><li><strong>缺口三：行为义务不完整。</strong> 是前两件事的结果：5 个能力只部分验证，2 个未知。</li></ul>
+<h2 id="cost">花费和耗时</h2><div class="table wide"><table><thead><tr><th>角色</th><th>调用次数</th><th class="num">花费（美元）</th><th class="num">会话时间合计（分钟）</th><th class="num">最长一次（秒）</th></tr></thead><tbody><tr><td>作者</td><td>6（含 2 次试调）</td><td class="num">54.25</td><td class="num">107</td><td class="num">3,098</td></tr><tr><td>测试设计</td><td>10</td><td class="num">42.73</td><td class="num">101</td><td class="num">984</td></tr><tr><td>事实审阅</td><td>15</td><td class="num">24.03</td><td class="num">51</td><td class="num">452</td></tr><tr><td>测试审阅</td><td>4（1 次超时）</td><td class="num">19.03</td><td class="num">50</td><td class="num">855</td></tr><tr><td>事实编写</td><td>17</td><td class="num">17.01</td><td class="num">36</td><td class="num">403</td></tr><tr><td>controller</td><td>10（含试调）</td><td class="num">10.22</td><td class="num">14</td><td class="num">190</td></tr><tr><td>合计</td><td>62</td><td class="num">167.26</td><td class="num"></td><td class="num"></td></tr></tbody></table></div><p>事实和测试的会话是并行跑的，所以各角色的会话时间加起来超过实际经过的时间。</p><h3>作者的四次调用</h3><div class="table wide"><table><thead><tr><th>调用</th><th>做什么</th><th>用时</th><th class="num">花费（美元）</th></tr></thead><tbody><tr><td>第 1 次</td><td>实现第一部分（核心、命令行和多数前端）</td><td>35 分钟</td><td class="num">18.36</td></tr><tr><td>第 2 次</td><td>实现第二部分</td><td>10 分钟</td><td class="num">4.59</td></tr><tr><td>第 3 次</td><td>初稿被防默写检查退回后重写 34 个文件</td><td>52 分钟</td><td class="num">26.04</td></tr><tr><td>第 4 次</td><td>为没有检查的两个能力自查，没有改文件</td><td>10 分钟</td><td class="num">5.10</td></tr></tbody></table></div><h3>时间线</h3><div class="table wide"><table><thead><tr><th>时间</th><th>发生了什么</th></tr></thead><tbody><tr><td>03:26:53</td><td>输入命令</td></tr><tr><td>03:44:49</td><td>对话里的 agent 提交，作业开始（准备用了 18 分钟：测试环境、读源码、写清单、转换、试调运行器）</td></tr><tr><td>03:46 – 04:08</td><td>写测试事实并审阅（22.6 分钟）</td></tr><tr><td>04:08 – 04:12</td><td>记录原版基线，验证叶子测试（3.6 分钟）</td></tr><tr><td>04:12 – 04:49</td><td>为 10 个叶子设计测试并审阅（37.5 分钟）</td></tr><tr><td>04:49 – 05:01</td><td>带上新测试重录基线，封存约定（12 分钟）</td></tr><tr><td>05:01 – 05:46</td><td>作者写初稿，两次调用（45 分钟）；保存被防默写检查拒绝</td></tr><tr><td>05:49 – 06:40</td><td>作者重写（52 分钟），保存为候选</td></tr><tr><td>06:40 – 06:42</td><td>第一次全量对比和安装检查</td></tr><tr><td>06:47 – 06:57</td><td>作者自查</td></tr><tr><td>06:57 – 06:58</td><td>第二次全量对比和安装检查</td></tr><tr><td>07:01:54</td><td>带缺口交付</td></tr></tbody></table></div>
+<h2 id="issues">问题清单</h2><p>前 7 条是启动对话在 <code>issues.md</code> 里记的，后 4 条是我跟踪这次运行时看到的。分类是我的判断。</p><div class="table wide"><table><thead><tr><th>编号</th><th>来源</th><th>问题</th><th>分类</th><th>说明</th></tr></thead><tbody><tr><td>1</td><td>启动对话记录</td><td>测试环境建好后想补装两个包，被拒绝（目录已存在，不覆盖）。对话删掉环境重建。</td><td>现象</td><td>按设计不覆盖已有环境。可以考虑支持给已有环境追加依赖。</td></tr><tr><td>2</td><td>启动对话记录</td><td>清单转换拒绝了一条能力描述，说它“像实现代码”。描述以 “import tqdm gives ...” 开头。改了措辞后通过。</td><td>现象</td><td>过滤器的一次误判。报错没有指出是哪段文字，改进报错信息会省一次猜测。</td></tr><tr><td>3</td><td>启动对话记录</td><td>原版的 <code>tqdm/_utils.py</code> 在这个提交上本身导入失败，对话自己加的别名检查因此在原版上不通过，对话去掉了这个导入。</td><td>现象</td><td>上游代码的缺陷，没有放宽任何验收标准。</td></tr><tr><td>4</td><td>启动对话记录</td><td><code>plan_capabilities</code> 和 <code>audit_check_scope</code> 两个工具要把整份清单（约 100 kB）放进调用参数里，对话改用功能相同的命令行。</td><td>需要改 nanolize</td><td>这两个工具应当能接受清单文件的路径，和启动评审的工具一样。</td></tr><tr><td>5</td><td>启动对话记录</td><td>原版检查 <code>tests-pandas</code> 在冻结基线时失败，整次行为对比停在“未验证”，交付因此带缺口。</td><td>需要改 nanolize</td><td>一个检查在原版上失败一次，作业里没有重跑它或重录基线的途径。失败本身的原因没有查明，那一部分是现象。</td></tr><tr><td>6</td><td>启动对话记录</td><td>一个测试审阅会话在 855 秒时限处超时，8 个测试文件作废，两个能力没有得到验证。</td><td>需要改 nanolize</td><td>超时后没有重试，一个会话里塞了 8 个文件，时限也不随 effort 调整。xhigh 是这个分支新加的默认值，其余三个审阅会话用了 599 到 787 秒，离时限很近。</td></tr><tr><td>7</td><td>启动对话记录</td><td>作者和 controller 的调用记录里，顶层的花费字段是空的。</td><td>需要改 nanolize</td><td>金额其实记在每次会话的子记录里（作者 54.25 美元，controller 10.22 美元），顶层没有汇总。启动对话因此以为没有记录金额，报的总花费少了 64 美元。</td></tr><tr><td>8</td><td>我的观察</td><td>xhigh 下冻结阶段花了 102.79 美元，占总花费的 61%。测试设计平均每个叶子 4.27 美元，测试审阅每次约 6 美元。</td><td>现象</td><td>是配置的结果。没有同一项目在默认 effort 下的数据可比。</td></tr><tr><td>9</td><td>我的观察</td><td>作者的初稿 61% 与原版相同，34 个文件被退回，重写花了 52 分钟、26.04 美元。</td><td>现象</td><td>防默写机制按设计工作。作者模型会默写公开的上游代码，这在之前的运行里也出现过。</td></tr><tr><td>10</td><td>我的观察</td><td>controller 为没有检查的两个能力安排了一次作者自查，10 分钟、5.10 美元，没有改任何文件。</td><td>现象</td><td>这一步没有产出，也不构成验证。</td></tr><tr><td>11</td><td>我的观察</td><td>建测试环境的工具调用超过 120 秒，被 Claude Code 转到后台继续，结果正常返回。</td><td>现象</td><td>不影响结果。</td></tr></tbody></table></div>
+<h2 id="limits">没有验证的</h2><ul><li>花费 167.26 美元不含启动对话本身（它调用了 48 次 nanolize 工具），也不含超时的那次测试审阅（没有记到金额），所以实际总额略高。</li><li><code>tests-pandas</code> 在原版上失败的原因没有查明。</li><li>没有做同一项目在默认 effort 下的对照运行，所以 xhigh 多花了多少时间和钱没有数据。</li><li>任务成本评估没有开启。</li><li>这次运行只跑了一遍。</li><li>通过检查不等于行为等价：检查只覆盖它们执行到的情况。</li></ul>
+<footer>本页的数字来自作业自己的记录（状态文件、基线、验证结果、每次模型调用的记录）和启动对话写的 <code>issues.md</code>。时间是 UTC。</footer>
+</main>
+</body>
+</html>
