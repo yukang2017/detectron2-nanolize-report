@@ -1,0 +1,131 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ponytail-audit 与 nanolize 结合方案</title><style>
+:root{--bg:#fbfaf7;--fg:#1d1c1a;--mut:#6b6862;--line:#e3dfd6;--card:#fff;--ok:#1f7a4d;--warn:#a45a00;--bad:#b3261e;--acc:#2456a6;--soft:#f1eee7;--a:#2456a6;--b:#8a4fbf;--c:#1f7a4d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161513;--fg:#ece9e2;--mut:#a09b91;--line:#34322d;--card:#1f1e1b;--ok:#62c794;--warn:#e0a458;--bad:#f08a80;--acc:#8fb4f0;--soft:#262420;--a:#8fb4f0;--b:#c7a3ee;--c:#62c794}}
+:root[data-theme="dark"]{--bg:#161513;--fg:#ece9e2;--mut:#a09b91;--line:#34322d;--card:#1f1e1b;--ok:#62c794;--warn:#e0a458;--bad:#f08a80;--acc:#8fb4f0;--soft:#262420;--a:#8fb4f0;--b:#c7a3ee;--c:#62c794}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif}
+main{max-width:1040px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;line-height:1.3;margin:6px 0 8px}h2{font-size:21px;margin:44px 0 12px;padding-top:14px;border-top:1px solid var(--line)}h3{font-size:16.5px;margin:24px 0 6px}
+.eyebrow{color:var(--mut);font-size:13px}.lead{font-size:17px}p{margin:10px 0}code{background:var(--soft);padding:1px 5px;border-radius:4px;font-size:.9em;word-break:break-word}
+pre{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:13.5px;line-height:1.55;margin:10px 0}pre code{background:none;padding:0;word-break:normal}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:20px 0}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}.tile .k{color:var(--mut);font-size:13px}.tile .v{font-size:24px;font-weight:650;line-height:1.35}.tile .n{color:var(--mut);font-size:13px;line-height:1.5}
+.tile.warn .v{color:var(--warn)}
+.scroll{overflow-x:auto;margin:10px 0}table{border-collapse:collapse;width:100%;font-size:14.5px;background:var(--card)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}th{background:var(--soft);font-weight:600}
+table.kv td:first-child{white-space:nowrap}
+.note{background:var(--soft);border-left:3px solid var(--acc);padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-size:15px}
+.note.warn{border-left-color:var(--warn)}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:10px;border:1px solid var(--line);margin-right:6px;white-space:nowrap}
+.tag.a{color:var(--a);border-color:var(--a)}.tag.b{color:var(--b);border-color:var(--b)}.tag.c{color:var(--c);border-color:var(--c)}.tag.x{color:var(--mut)}
+ul,ol{padding-left:22px;margin:8px 0}li{margin:4px 0}a{color:var(--acc)}footer{color:var(--mut);font-size:13px;margin-top:50px}
+.flow{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin:14px 0}
+.st{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 8px 10px;min-width:0}
+.st .no{color:var(--mut);font-size:12px}.st .nm{font-weight:600;font-size:14px;line-height:1.35}
+.pin{display:block;margin-top:8px;font-size:12.5px;line-height:1.45;border-left:3px solid var(--a);padding-left:6px}
+.pin.b{border-left-color:var(--b)}.pin.c{border-left-color:var(--c)}.pin b{display:block}
+.chain{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:26px;margin:16px 0}
+.bx{position:relative;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14.5px;line-height:1.5}
+.bx .t{font-weight:600;display:block}.bx .s{color:var(--mut);font-size:13px}
+.bx:not(:last-child)::after{content:"→";position:absolute;right:-20px;top:50%;transform:translateY(-50%);color:var(--mut)}
+@media (max-width:760px){table{min-width:680px}.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.chain{grid-template-columns:1fr;gap:24px}
+.bx:not(:last-child)::after{content:"↓";right:50%;top:auto;bottom:-25px;transform:translateX(50%)}}
+</style></head><body><main><div class="eyebrow">方案文档 · 2026-11-18 · 还没有实现，也没有做过试验</div>
+<h1>把 ponytail-audit 接进 nanolize：结合方案</h1>
+<p class="lead"><code>/ponytail-audit</code> 能读出一个代码库里哪里有风险、哪里没有测试、哪里多余，但它只出报告，不改代码，也不验证自己说得对不对。
+nanolize 能把代码库重写得更小并逐项验证行为，但它只看得见检查覆盖到的行为。
+这份方案让两者各做擅长的事：<b>audit 只提供线索，nanolize 把线索变成可以执行的检查，由检查的结果说话。</b>
+audit 的任何一条结论都不直接改变作业的状态。</p>
+<div class="tiles"><div class="tile "><div class="k">接入的位置</div><div class="v">3 处</div><div class="n">冻结之前、候选通过之后、交付报告里</div></div><div class="tile "><div class="k">对 nanolize 的改动</div><div class="v">1 个新角色</div><div class="n">审计者；测试设计者多一项输入；报告多一张表</div></div><div class="tile "><div class="k">默认</div><div class="v">关闭</div><div class="n">用一个开关打开，不开时作业和现在完全一样</div></div><div class="tile warn"><div class="k">现在的状态</div><div class="v">只有方案</div><div class="n">建议先做一次不改代码的手工试验，再决定做不做</div></div></div>
+<div class="note"><b>建议的第一步不是写代码。</b>在已有的一次 tqdm 压缩结果上，对原版和交付版各跑一次 <code>/ponytail-audit</code>，人工对照两份报告（第 8 节的第 0 步）。
+它能回答这份方案最关键的问题：audit 找到的风险里，有多少是 nanolize 现有的测试设计没有覆盖的。如果很少，后面的集成就不值得做。</div>
+<h2>1. 两个工具各自做什么</h2>
+<div class="scroll"><table class="kv"><thead><tr><th></th><th>ponytail-audit</th><th>nanolize</th></tr></thead><tbody><tr><td>是什么</td><td>ponytail 仓库里的一个技能，一段约 5 KB 的提示词</td><td>一条八个阶段的流水线，带验证和交付</td></tr><tr><td>输入</td><td>一个代码库，或其中一个目录</td><td>一个带测试的 Git 仓库，加上要保留的功能范围</td></tr><tr><td>做什么</td><td>先读入口、数据流和预期负载，再按六类找问题：错误、风险（安全和数据丢失）、规模、缺测试、速度、多余代码</td><td>建功能图，冻结原版行为，设计测试并用“敲掉功能看测试是否失败”验证测试有效，让不看原码的作者重写，逐项比对后交付</td></tr><tr><td>输出</td><td>一份给人读的报告：最多 20 条发现，分必须修、应该修、可以修三组，每条有位置、问题、修法和不修的后果；结尾给“可以少多少行”</td><td>一个新分支上更小的实现，加一份逐项检查的记录和明确列出的缺口</td></tr><tr><td>改代码吗</td><td>不改</td><td>改（在作业自己的分支上）</td></tr><tr><td>验证吗</td><td>不验证。提示词要求每条发现给出“这个输入导致这个错误结果”，但没有东西去执行它</td><td>验证。每个候选都和原版的冻结检查比对</td></tr><tr><td>代价</td><td>一次会话</td><td>tqdm 这种规模约 3 小时、160 到 210 美元</td></tr></tbody></table></div>
+<p>ponytail 的主提示词管的是另一件事：让 agent 以后写新代码时少写。这份方案只用它的 audit，其它结合点放在第 9 节。</p>
+<h2>2. 为什么值得接：各自缺的正好是对方有的</h2>
+<h3>nanolize 现在看不见的三件事</h3>
+<ul>
+<li><b>检查没覆盖的行为会悄悄丢掉。</b>作者不看原码，按功能描述和测试写最少的代码，没有测试盯着的输入校验和错误处理最容易消失。
+我们自己的记录里有例子：2026 年 11 月 16 日的一次 tqdm 运行报告 56/56 项检查通过，但把评审时被丢弃的测试文件拿到交付的代码上跑，287 个用例里有 21 个与原版不一致。</li>
+<li><b>原版的缺陷会被原样冻结。</b>nanolize 把原版的行为当标准。原版里的 bug 如果被测试盯住，重写会忠实地保留；如果没被盯住，保留与否全凭运气。两种情况主人都不知情。</li>
+<li><b>范围选择只能靠人看功能树。</b>哪些功能其实没人用、哪些选项是为“以后也许用得上”写的，功能图不会说。</li>
+</ul>
+<h3>ponytail-audit 做不到的三件事</h3>
+<ul>
+<li><b>它的结论是模型读代码后的判断。</b>同一个仓库跑两次，发现可能不同；有误报，也有漏报。</li>
+<li><b>它不执行任何东西。</b>“这个输入会出错”只是一句话。</li>
+<li><b>大仓库读不全。</b>提示词自己就要求“说明哪些部分没读”。</li>
+</ul>
+<p>所以结合的方式只有一种是稳妥的：audit 的发现进来时是线索，出去时必须已经变成一条在原版上录制过、在候选上比对过的检查。</p>
+<div class="chain"><div class="bx"><span class="t">审计发现</span><span class="s">一个判断：“这段逻辑有风险，这个输入会出错”</span></div><div class="bx"><span class="t">一条场景</span><span class="s">测试设计者把那个输入写成一次通过公开接口的调用</span></div><div class="bx"><span class="t">在原版上录制</span><span class="s">原版对这个输入返回什么、报什么错，由程序记录，不由模型写</span></div><div class="bx"><span class="t">在候选上比对</span><span class="s">一致就是保住了，不一致就是回归。这一步才产生结论</span></div></div>
+<p>中间两步 nanolize 已经有：场景文件就是只给输入、不写期望值，由程序在原版上录制结果。缺的只是第一步的线索来源。</p>
+<h2>3. 总体设计：三个接点</h2>
+<div class="flow"><div class="st"><div class="no">01</div><div class="nm">发现与建图</div><span class="pin "><b>A：审原版</b>一次审计，得到结构化的发现</span></div><div class="st"><div class="no">02</div><div class="nm">选择范围</div><span class="pin "><b>A1</b>“可能没人用”的功能打上标记，仅提示</span></div><div class="st"><div class="no">03</div><div class="nm">冻结契约</div><span class="pin "><b>A2</b>风险清单交给对应功能的测试设计者</span></div><div class="st"><div class="no">04</div><div class="nm">冻结任务</div></div><div class="st"><div class="no">05</div><div class="nm">重写</div></div><div class="st"><div class="no">06</div><div class="nm">验证与修复</div><span class="pin b"><b>B：审候选</b>新发现写成场景，原版和候选各跑一遍</span></div><div class="st"><div class="no">07</div><div class="nm">测量任务成本</div></div><div class="st"><div class="no">08</div><div class="nm">交付</div><span class="pin c"><b>C：前后对照</b>报告里放一张原版和交付版的对照表</span></div></div>
+<div class="scroll"><table><thead><tr><th>接点</th><th>什么时候</th><th>审谁</th><th>产出</th><th>会不会改变作业状态</th></tr></thead><tbody><tr><td><span class="tag a">接点 A</span></td><td>冻结契约之前</td><td>原版</td><td>给范围选择的提示；给测试设计者的风险清单；给主人的缺陷清单</td><td>不会。只影响设计出哪些测试</td></tr><tr><td><span class="tag b">接点 B</span></td><td>候选通过全部检查之后、交付之前</td><td>选中的候选</td><td>一组补充场景，在原版和候选上各跑一遍</td><td>有差异时多一个缺口，可触发一轮修复；不会让作业失败</td></tr><tr><td><span class="tag c">接点 C</span></td><td>交付时</td><td>原版和交付版</td><td>报告里的一张对照表</td><td>不会</td></tr></tbody></table></div>
+<h2>4. 接点 A：冻结之前审原版</h2>
+<p>在第 01 阶段末尾加一次审计会话，读的是原版。大仓库按功能图的顶层范围分开审，每个范围一次会话，这正好对应 audit 提示词里“审用户指定的目录”的用法。
+审计者的回答不是给人读的文字，而是一份结构化的清单：</p>
+<pre><code>{"assumed_load": "一个人在命令行里跑，偶尔被别的库调用",
+ "findings": [
+   {"kind": "missing_test",          // bug | risk | scale | missing_test | speed | lean
+    "group": "should",               // must | should | nice
+    "path": "pkg/io.py", "lines": [40, 52],
+    "what": "读配置文件并把每一行解析成键值对",
+    "problem": "遇到没有等号的行直接跳过，没有任何测试盯着这个分支",
+    "case": "输入一行 'PORT' → 这一行被静默忽略",   // 必填：没有具体情形就不算发现
+    "fix": "…", "lean": null}],
+ "not_checked": ["docs/", "benchmarks/"]}</code></pre>
+<p>每条发现按 <code>path</code> 对到功能图里拥有这个文件的功能。对不上的只进报告。六类发现去向不同：</p>
+<div class="scroll"><table><thead><tr><th>发现类别</th><th>去向</th><th>在 nanolize 里怎么用</th><th>需要新做的</th></tr></thead><tbody><tr><td><b>缺测试</b>：有分支、解析、金额、安全、写数据的逻辑，却没有会因它出错而失败的测试</td><td>A2：这个功能的测试设计者</td><td>设计者的输入里多一项风险清单。提示词要求每条给一个场景或测试，做不到要说明原因。之后照常走试跑、敲掉功能验证和评审</td><td>设计者输入多一个字段，提示词多一段</td></tr><tr><td><b>风险</b>：输入校验、防数据丢失的错误处理、安全检查</td><td>同上</td><td>同上。场景里用那条发现给的恶意或畸形输入，录下原版怎么拒绝它</td><td>同上</td></tr><tr><td><b>错误</b>：原版本身的 bug</td><td>主人</td><td>有人值守时列在范围选择页上，由主人选：照原样保留、先修原版再跑、或不让测试盯住它。无人值守时一律照原样保留，并在交付报告里列出</td><td>范围选择页和报告各加一块</td></tr><tr><td><b>多余代码</b>里的“没人用的选项、推测性的功能”</td><td>A1：范围选择页</td><td>在对应的功能上打一个标记，写明依据。只是提示，选不选仍由主人定</td><td>范围选择页加标记</td></tr><tr><td><b>多余代码</b>里的“死代码、重复的辅助函数、标准库能替代”</td><td>不用</td><td>不看原码的重写本来就不会把它们写出来。只把条数记进报告，作为第 6 节对照表的原版一列</td><td>无</td></tr><tr><td><b>规模、速度</b></td><td>第一版不用</td><td>nanolize 的性能验收是另一条线。以后可以把它们交给性能测试的设计者</td><td>无</td></tr></tbody></table></div>
+<div class="note"><b>为什么 A2 是这份方案里最有用的一处。</b>它在重写之前就让原版的风险逻辑被检查盯住，重写时作者就绕不过去。
+而且它用的全是现有机制：设计者本来就在原版的副本里工作，场景本来就由程序录制，测试有没有用本来就由“敲掉功能看是否失败”来判断。
+audit 的误报在这里代价很小：一条没用的线索最多浪费设计者的一点时间，写出来的场景如果敲掉功能后照样通过，会被现有的关卡拒掉。</div>
+<h2>5. 接点 B：候选通过之后再审一次</h2>
+<p>A2 管的是“原版里已经看得出风险的地方”。还有一种情况它管不到：原版某个保护写得不起眼，审原版时没被当成风险，重写时丢了。接点 B 从另一头查：</p>
+<ol>
+<li>候选通过全部检查之后，用同一份审计规则审<b>候选</b>，只要“错误”和“风险”两类。</li>
+<li>每条发现都带一个具体情形（什么输入导致什么结果）。交给一个测试设计者，写成一条通过公开接口调用的场景。设计者只拿到情形的描述，不拿候选的代码。</li>
+<li>这条场景在<b>原版和候选上各跑一遍</b>。</li>
+<li>两边表现一致：不是回归。要么原版也是这样（那是照原样保留的行为），要么这条发现是误报。丢弃。</li>
+<li>两边不一致：这是现有检查漏掉的回归。记为一个缺口，并把“原版对这个输入的表现”作为一条事实交给作者修。这种事实和作者平时收到的检查反馈是同一种形式，不含原版代码。</li>
+</ol>
+<p>这里不比较两份审计报告的文字，只比较行为。所以审计者说得准不准并不重要：说错了，第 4 步会把它筛掉。</p>
+<div class="note warn"><b>这一处最需要推敲。</b>nanolize 的契约在重写前就封存了，封存之后不再接受新的检查。所以这些补充场景不能算进契约。第一版的做法是：
+它们单独记录，有差异时交付状态最多是“完成但有缺口”，由控制器决定要不要用剩下的修复机会去修。要不要允许它们进入契约，留到看过试验结果再定。</div>
+<h2>6. 接点 C：报告里的前后对照</h2>
+<p>同一份审计规则对原版和交付版各审一次，条数并排放进交付报告。下面的数字是<b>示意</b>，不是任何一次运行的结果：</p>
+<div class="scroll"><table><thead><tr><th>类别</th><th>原版</th><th>交付版</th><th>说明</th></tr></thead><tbody><tr><td>错误、风险（必须修）</td><td>3</td><td>3</td><td>相同的三条：照原样保留</td></tr><tr><td>缺测试</td><td>9</td><td>2</td><td>其中 7 条经接点 A2 有了场景</td></tr><tr><td>多余代码</td><td>14 条，估计可少 800 行</td><td>1 条，估计可少 30 行</td><td>交付版里还剩多少可以去掉</td></tr><tr><td>接点 B 的补充场景</td><td>–</td><td>6 条里 0 条有差异</td><td></td></tr><tr><td>审计没读的部分</td><td>docs/、benchmarks/</td><td>benchmarks/</td><td>照审计者说的原样列出</td></tr></tbody></table></div>
+<p>它的用处是给体积比例之外加一把别人的尺子：体积比例说“小了多少”，这张表说“剩下的代码里别人还挑得出多少毛病”。
+因为审计每次的结论会有出入，报告里要写明这是参考数字；想要稳一些就每边审三次，报范围。</p>
+<h2>7. 要守住的边界</h2>
+<ul>
+<li><b>作者仍然看不到原版。</b>审原版得到的发现带着原版的文件名、行号和代码片段，只能给验证方、测试设计者和主人。到作者手里的只有两样：范围的决定，和由程序从录制结果生成的事实。</li>
+<li><b>审计的结论不改变作业状态。</b>它只能变成线索、场景或报告里的一行。能改变状态的只有检查的结果。</li>
+<li><b>默认关闭。</b>用一个开关打开（比如 <code>audit=on</code>）。不开时作业的每一步和现在一样。</li>
+<li><b>有上限。</b>每次审计最多 20 条发现（audit 提示词本身的限制）；每个功能最多交给设计者若干条；接点 B 只审选中的那一个候选，不是每个候选都审。</li>
+<li><b>没读到的要说。</b>审计者报告的“没检查的部分”原样进交付报告，不能让人以为整个仓库都审过。</li>
+<li><b>许可。</b>ponytail 是 MIT 许可。把它的审计规则放进 nanolize 的提示词目录时保留版权声明和出处。</li>
+</ul>
+<h3>怎么调用 audit：两种方式</h3>
+<div class="scroll"><table><thead><tr><th></th><th>调用主持会话里已装的 ponytail 插件</th><th>把审计规则放进 nanolize 自己的提示词目录（建议）</th></tr></thead><tbody><tr><td>怎么跑</td><td>主持会话执行 <code>/ponytail-audit</code></td><td>用 nanolize 现有的角色运行器起一个审计者会话</td></tr><tr><td>输出</td><td>给人读的文字，要再解析一遍</td><td>直接按第 4 节的结构回答，程序能校验</td></tr><tr><td>隔离</td><td>在主持会话里，看得到的东西多</td><td>和其它角色一样在沙箱里，只看得到该看的树</td></tr><tr><td>依赖</td><td>用户得先装 ponytail；Codex 和 Claude Code 里行为不完全一样</td><td>无外部依赖；ponytail 更新后要手工跟进</td></tr><tr><td>取哪些内容</td><td>整个技能</td><td>只取“找什么”和“报告之前核对什么”两节，输出格式用我们自己的</td></tr></tbody></table></div>
+<h2>8. 实施顺序和工作量</h2>
+<p>工作量是读代码之后的估计，没有动手验证过。</p>
+<div class="scroll"><table><thead><tr><th>步骤</th><th>做什么</th><th>产出</th><th>估计</th></tr></thead><tbody><tr><td>0</td><td><b>手工试验，不改代码。</b>在已有的一次 tqdm 压缩结果上，对原版和交付版各跑一次 <code>/ponytail-audit</code>，人工对照</td><td>三个数字：原版的“缺测试”和“风险”发现里，现有设计测试没覆盖的有几条；交付版有没有原版没有的“必须修”；多余代码的条数前后各多少</td><td>两次会话，估计每次几美元（没有实测）。这是付费运行</td></tr><tr><td>1</td><td>接点 A2：审计者角色，结构化输出，风险清单交给测试设计者</td><td>一个开关；设计出的场景里能看出哪些来自风险清单</td><td>约半天</td></tr><tr><td>2</td><td>接点 C：交付版再审一次，报告里加对照表</td><td>报告多一节</td><td>两三个小时</td></tr><tr><td>3</td><td>接点 B：审候选，补充场景，差异记为缺口并可触发修复</td><td>一类新的缺口；修复反馈里多一种事实</td><td>约一天，取决于第 5 节那个问题怎么定</td></tr><tr><td>4</td><td>接点 A1 和缺陷清单：范围选择页上的标记和主人的选择</td><td>选择页多两块</td><td>约半天</td></tr></tbody></table></div>
+<p>第 0 步的结果决定后面做不做、先做哪个。如果原版的风险发现大多已被现有测试覆盖，就只做第 2 步当作报告的补充；如果交付版真的出现了原版没有的问题，第 3 步优先。</p>
+<h2>9. audit 之外的结合点</h2>
+<div class="scroll"><table><thead><tr><th></th><th>做什么</th><th>作用</th><th>建议</th></tr></thead><tbody><tr><td>对照实验</td><td>让装了 ponytail 的 agent 直接“把这个仓库改小、测试保持通过”，再用 nanolize 的冻结检查、原测试回放和体积来评它</td><td>得到“流水线比一段提示词多带来什么”的数字</td><td>值得做一次；是付费运行</td></tr><tr><td>交付后防反弹</td><td>交付报告里加一句：压缩后的仓库装上 ponytail，避免之后被 agent 再写胖</td><td>两者最直接的互补</td><td>只写进报告。不把它的规则文件放进交付的代码树：新增文件会计入体积，还可能和仓库已有的规则文件冲突</td></tr><tr><td>把 ponytail 的“阶梯”放进重写作者的提示词</td><td>–</td><td>–</td><td>不建议。作者现在的提示词已经要求用最少的代码和结构，比它更激进；它的第一级“没人要的功能就别做”用在重写里会让作者丢掉契约里的行为</td></tr></tbody></table></div>
+<h2>10. 还没定、需要决定的事</h2>
+<ol>
+<li>要不要先做第 0 步的手工试验。它要花钱，但花得最少，而且决定后面的取舍。</li>
+<li>原版的缺陷默认怎么处理。方案里写的是照原样保留并在报告里列出；另一种是有“必须修”的发现时停下来等主人。</li>
+<li>接点 B 发现的回归，是只列为缺口，还是允许触发修复，还是允许进入契约。</li>
+<li>审计规则是放进 nanolize 的提示词目录，还是依赖用户装好的插件。方案建议前者。</li>
+</ol>
+<h2>11. 依据和没核实的地方</h2>
+<ul>
+<li>ponytail 读的是 <a href="https://github.com/dietrichgebert/ponytail">公开仓库</a> 2026 年 10 月 29 日的提交 <code>96608e0</code>：README、主提示词、<code>ponytail-audit</code> 技能、基准说明。它的钩子代码和 <code>ponytail-review</code> 技能没有读。</li>
+<li>ponytail 自己报的效果数字这份方案没有引用，也没有复现过。</li>
+<li>nanolize 一侧对照的是当前 main（<code>71d386d</code>）：阶段划分、测试设计者拿到的输入、场景文件的录制方式、作者的提示词。</li>
+<li>第 2 节那组 287 个用例里 21 个不一致的数字，来自我们 2026 年 11 月 16 日一次 tqdm 运行之后的复查。</li>
+<li>没有做过任何试验。audit 在真实仓库上能找到多少有用的线索、误报有多少，都不知道。第 6 节的表是示意。</li>
+</ul>
+<footer>这份文档是方案，不是结果。里面涉及的 nanolize 内部信息只有阶段名称和几个机制的说法。</footer></main></body></html>
