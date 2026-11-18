@@ -1,0 +1,229 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>nanolize 简化方案</title><style>
+:root{--bg:#fbfaf7;--fg:#1d1c1a;--mut:#6b6862;--line:#e3dfd6;--card:#fff;--ok:#1f7a4d;--warn:#a45a00;--acc:#2456a6;--soft:#f1eee7;
+--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161513;--fg:#ece9e2;--mut:#a09b91;--line:#34322d;--card:#1f1e1b;--ok:#62c794;--warn:#e0a458;--acc:#8fb4f0;--soft:#262420;
+--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181}}
+:root[data-theme="dark"]{--bg:#161513;--fg:#ece9e2;--mut:#a09b91;--line:#34322d;--card:#1f1e1b;--ok:#62c794;--warn:#e0a458;--acc:#8fb4f0;--soft:#262420;
+--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 -apple-system,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif}
+main{max-width:1040px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;line-height:1.3;margin:6px 0 8px}h2{font-size:21px;margin:44px 0 12px;padding-top:14px;border-top:1px solid var(--line)}h3{font-size:16px;margin:22px 0 6px}
+.eyebrow{color:var(--mut);font-size:13px}.lead{font-size:17px}p{margin:10px 0}code{background:var(--soft);padding:1px 5px;border-radius:4px;font-size:.9em;word-break:break-word}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:20px 0}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}.tile .k{color:var(--mut);font-size:13px}.tile .v{font-size:25px;font-weight:650;line-height:1.3}.tile .n{color:var(--mut);font-size:13px;line-height:1.5}
+.scroll{overflow-x:auto;margin:10px 0}table{border-collapse:collapse;width:100%;font-size:14.5px;background:var(--card)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}th{background:var(--soft);font-weight:600}
+td{font-variant-numeric:tabular-nums}.r{text-align:right;white-space:nowrap}
+table.k td:first-child{color:var(--mut);min-width:128px}table.k th:first-child{min-width:128px}
+table.t td:first-child{white-space:nowrap}tr.sub td{color:var(--mut);font-size:13.5px}tr.sub td:first-child{padding-left:26px}
+tr.sum td{font-weight:650}
+table.rounds td:nth-child(1),table.rounds td:nth-child(2),table.rounds td:nth-child(3){white-space:nowrap}table.rounds{font-size:13.8px}
+.note{background:var(--soft);border-left:3px solid var(--acc);padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-size:15px}
+.note ol,.note ul{margin:6px 0}
+ul,ol{padding-left:22px;margin:8px 0}li{margin:5px 0}a{color:var(--acc)}footer{color:var(--mut);font-size:13px;margin-top:50px}
+.small{font-size:13.5px;color:var(--mut)}
+dl{margin:8px 0}dt{font-weight:650;margin-top:8px}dd{margin:0 0 0 0;color:var(--fg)}
+.viz-root{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px 12px;margin:14px 0}
+.viz-root .cap{font-weight:650;font-size:15px}.viz-root .sub{color:var(--mut);font-size:13px;margin-bottom:8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--fg);margin:6px 0 10px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.rl{font-size:13.5px;margin:12px 0 4px}.rl b{font-weight:650}
+.track{position:relative;height:24px;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:20% 100%;border-right:1px solid var(--line)}
+.bar{position:absolute;left:0;top:1px;height:22px;display:flex;gap:2px;border-radius:0 4px 4px 0;overflow:hidden}
+.seg{height:100%;min-width:2px;cursor:default}.seg:hover,.seg:focus-visible{filter:brightness(1.15);outline:2px solid var(--fg);outline-offset:-2px}
+.seg.s1{background:var(--s1)}.seg.s2{background:var(--s2)}.seg.s3{background:var(--s3)}.seg.s4{background:var(--s4)}.seg.s5{background:var(--s5)}
+.tot{position:absolute;top:0;line-height:24px;font-size:13.5px;font-weight:650;white-space:nowrap;padding-left:8px}
+.axis{position:relative;height:20px;font-size:12px;color:var(--mut);margin-top:4px}.axis span{position:absolute;top:0;transform:translateX(-50%)}.axis span:first-child{transform:none}.axis span:last-child{transform:translateX(-100%)}
+#tip{position:absolute;z-index:9;background:var(--fg);color:var(--bg);font-size:13px;line-height:1.4;padding:6px 9px;border-radius:6px;pointer-events:none;max-width:260px}
+#tip b{display:block;font-size:14px}#tip span{opacity:.85}
+
+table.plan td:nth-child(1){white-space:nowrap;font-weight:650}table.plan{font-size:13.8px}table.plan th{white-space:nowrap}
+.prop{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0}
+.prop h3{margin:0 0 6px;font-size:16.5px}.prop .meta{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
+.pill{display:inline-block;font-size:12px;padding:1px 9px;border-radius:10px;border:1px solid var(--line);color:var(--mut);white-space:nowrap}
+.pill.go{color:var(--ok);border-color:var(--ok)}.pill.ask{color:var(--warn);border-color:var(--warn)}
+.prop dl{margin:4px 0}.prop dt{font-weight:650;margin-top:8px;font-size:14px;color:var(--mut)}.prop dd{margin:2px 0 0 0}
+.dec{background:var(--soft);border-left:3px solid var(--warn);padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0}
+.dec h3{margin:0 0 4px}
+.toc{columns:2;column-gap:28px;font-size:14.5px;padding-left:20px}@media (max-width:640px){.toc{columns:1}}
+
+table.tight{font-size:12.8px}table.tight th,table.tight td{padding:6px 6px}table.tight th{white-space:normal;vertical-align:bottom}
+
+.lanes{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:760px){.lanes{grid-template-columns:1fr}}
+.lane{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
+.lane h4{margin:0 0 8px;font-size:14px}.lane h4 span{font-weight:400;color:var(--mut)}
+.flow{display:flex;flex-wrap:wrap;gap:6px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:13.5px;line-height:1.45;flex:1 1 132px;max-width:240px}
+.st b{display:block}.st small{display:block;color:var(--mut);font-size:12.5px}
+.st .tg{display:inline-block;font-size:11.5px;border:1px solid var(--line);border-radius:9px;padding:0 7px;color:var(--mut);margin-top:3px}
+.st.gone{border-style:dashed}.st.gone b{text-decoration:line-through;color:var(--mut)}.st.gone .tg{color:var(--warn);border-color:var(--warn)}
+.st.less .tg{color:var(--acc);border-color:var(--acc)}.st.new{border-color:var(--ok)}.st.new .tg{color:var(--ok);border-color:var(--ok)}
+.join{text-align:center;color:var(--mut);font-size:13px;margin:2px 0}
+.track.g{height:28px}.gseg{position:absolute;top:3px;height:22px;border-radius:3px;min-width:2px;border-right:2px solid var(--card);box-sizing:border-box;cursor:default}
+.gseg:hover,.gseg:focus-visible{filter:brightness(1.15);outline:2px solid var(--fg);outline-offset:-2px}
+.gseg.s1{background:var(--s1)}.gseg.s2{background:var(--s2)}.gseg.s3{background:var(--s3)}.gseg.s4{background:var(--s4)}.gseg.s5{background:var(--s5)}
+.gseg.wait{background:repeating-linear-gradient(45deg,transparent 0 4px,var(--line) 4px 7px);border:1px dashed var(--mut)}
+.gend{position:absolute;top:0;line-height:28px;font-size:13.5px;font-weight:650;white-space:nowrap;padding-left:8px}
+.gl{font-size:12.8px;color:var(--mut);margin:3px 0 0;line-height:1.5}
+table.w td:nth-child(1){min-width:150px;font-weight:650}table.w{font-size:14px}
+table.inv td:nth-child(1){min-width:170px;font-weight:650}table.inv td:nth-child(2){min-width:210px}table.inv{font-size:13.8px}
+.kind{display:inline-block;font-size:12px;border-radius:9px;padding:0 8px;border:1px solid var(--line);white-space:nowrap}
+.kind.d{color:var(--fg)}.kind.i{color:var(--acc);border-color:var(--acc)}.kind.c{color:var(--warn);border-color:var(--warn)}
+</style></head><body><main><div class="eyebrow">nanolize · main @ 71d386d · 2026-11-18 · 方案，尚未实现</div><h1>作者可以查源码之后，nanolize 的流程能简化成什么样</h1><p class="lead">你定了三件事：作者可以查阅原版源码（仍然从空工作区开始，按功能图自己重写，不懂的地方再去查，不在原版上改）；
+从第一次调用起就告诉它“代码会和原版比对”，但不真的打回重写；上一份报告的第一档全做。这份方案回答你的问题：整条流程因此能简化成什么样，
+省掉哪些步骤，哪些模块可以同时跑。依据是把 main 上的流程从头到尾读了一遍（每一步在等谁、为什么等），以及这台机器上已有的运行记录。它接着<a href="../pipeline-review-20261118/">上一份报告</a>往下写，那里的条目编号（A1、C2 等）在这里直接沿用。</p><div class="note"><b>结论</b><ol>
+<li><b>你的判断成立：流程里有一大块只因为“作者看不到源码”才存在。</b>tqdm 的三次运行里，记录上能直接数出来的部分（写事实这一整步、防默写之后的重写和它后面那一轮）
+每次 42–72 分钟、60–74 美元，占时间的 21–34%、花费的 28–42%。加上对测试设计的估计（写给作者看的文字和围着这些文字的返工），是 54–79 分钟、83–100 美元，约三分之一的时间、一半的钱。</li>
+<li><b>骨架不变。</b>录基线、设计测试、再录基线、封存、写代码、对比、修复、交付，这个顺序还在。留下的部分守的是你没有放宽的那几条：
+测试只从原版来、不受作者影响；测试对作者保密；验收证据针对的正是交付的那份代码。</li>
+<li><b>大的等待里只有一处真的变了：作者开工不再需要冻结的产物。</b>所以第一版代码可以和整个冻结同时写。这是模块之间最大的一处并行。
+做法是两个作业加一步“导入”，都走现有的作业机制；写第一版的那个作业多一个角色设置：写完即停，不交付。</li>
+<li><b>按旧记录推算，tqdm 一次运行从 173–213 分钟降到串行的 97–111 分钟，再到并行的 64–71 分钟；模型花费从 162–212 美元降到约 76–108 美元。</b>
+并行那个数不含计算节点的排队，并且按第一档 D1 的估计缩短了修复；修复按原记录算是 70–75 分钟。
+detectron2（两次记录拼起来）从 1,243 分钟以上降到 572 分钟；多个 scope 同时写还能再降，但那一步的前提没验证过。</li>
+<li><b>关于 flexible，你说得对。</b>它改的是“由谁决定下一步”，而大体流程是由“谁必须等谁”决定的。新流程里，第一次完整对比之前没有需要模型来做的决定，
+controller 只在对比没过之后出场。</li>
+<li><b>最大的未知：还没有任何一次运行是在新前提下跑的。</b>作者看着源码写，体积会不会变大、重合度是多少、第一稿会挂几个检查、要写多久，都没有记录。
+所以在做最大的那处改动（测试设计）和两个作业之前，先做一个实验：一处小改动加两个现成的设置，跑两次 tqdm，约 238 美元。</li>
+<li><b>有 9 件事需要你定</b>，列在第十节。其中第 1、2、3、5 件会动到你已经说过的话：没有事实之后，“不懂再查”实际上会变成“大部分行为都要查”；
+第一档里 C2 整条、C1 的三处、D1 的一部分在新前提下没有对象了；吓唬的那句话有两种写法；E1 里你保留的第一轮 controller 也可以去掉。</li>
+</ol></div><div class="tiles"><div class="tile"><div class="k">只因“看不到源码”而存在的部分</div><div class="v">约 1/3 时间<br>约 1/2 花费</div><div class="n">tqdm 三次运行：54–79 分钟、83–100 美元，其中测试设计一项是估计。只算记录：21–34% 的时间、28–42% 的花费</div></div><div class="tile"><div class="k">tqdm 一次运行</div><div class="v">173–213 → 64–71 分钟</div><div class="n">推算，不含节点排队；不并行是 97–111 分钟</div></div><div class="tile"><div class="k">tqdm 模型花费</div><div class="v">$162–212 → 约 $76–108</div><div class="n">按旧记录扣掉不再发生的部分</div></div><div class="tile"><div class="k">需要你定的</div><div class="v">9 件</div><div class="n">见第十节，每件都附了我的建议</div></div></div><ol class="toc"><li><a href="#now">现在的流程，每一步在等什么</a></li><li><a href="#only">哪些东西只因“作者看不到源码”而存在</a></li>
+<li><a href="#new">简化后的流程</a></li><li><a href="#par">哪些可以同时跑</a></li><li><a href="#time">时间和花费</a></li>
+<li><a href="#ctl">controller、flexible 和并行模式还剩什么</a></li><li><a href="#items">你选的那几条在新前提下</a></li>
+<li><a href="#risk">风险和还没量过的</a></li><li><a href="#phase">实施顺序</a></li><li><a href="#dec">需要你定的事</a></li><li><a href="#how">这份方案是怎么来的</a></li></ol><h2 id="words">先说几个词</h2><dl>
+<dt>两条保证，以及放宽的是哪半句</dt><dd>保证一：测试和基线只能从原版产生，作者的任何结果都不能影响它们，controller 的选择也算在内。
+保证二原来有三层：作者看不到原版源码；作者看不到校验方的测试；验收证据必须正是针对交付的那份代码。你放宽的只是第一层。后两层和保证一都还在，这份方案里的每一处都按它们检查过。</dd>
+<dt>冻结和封存</dt><dd>写代码之前的准备阶段叫冻结，最后一步叫封存。封存之后“什么算对”就定下来了。</dd>
+<dt>基线和敲除</dt><dd>基线是每个检查在原版上的结果。敲除是把某个功能节点从原版里拿掉再跑检查；会因此失败的检查才算这个节点的有效测试。</dd>
+<dt>事实</dt><dd>把测试钉住的行为用文字写出来，给看不到测试也看不到源码的作者用。写完由另一个会话评审。</dd>
+<dt>固定流程和 controller</dt><dd>固定流程是代码里算出来的“下一步该做什么”。controller 是每一轮可以改写这个决定的模型会话。作者是真正写代码的模型会话。</dd>
+<dt>scope</dt><dd>交给一个作者会话写的一组功能，默认不超过 45,000 个原版 token。</dd>
+<dt>主作业和草稿作业</dt><dd>这份方案里的新词。主作业做校验方的事和合流之后的一切；草稿作业只写第一版代码。两个都走现有的作业机制，草稿作业多一个角色设置：写完第一版就停，不交付。</dd>
+<dt>运行代号</dt><dd>A：tqdm，旧 main。B：tqdm，分支，并行关。D：tqdm，合并后的 main，并行开。E：detectron2，旧分支，22 个 scope，跑完了。
+F：detectron2，冻结阶段跑了 9.9 小时后取消。G：python-dotenv。</dd>
+</dl><h2 id="now">一、现在的流程，每一步在等什么</h2><p>步骤和顺序读的是 23a686b 的代码树。之后 main 只合并了一个修复（现在的 71d386d），它改了评审回答的读取、验收缺口的判定和场景说明的字数上限，
+没有改步骤和顺序。下面是默认设置下一个作业的步骤，用时是 B 那次的记录。</p><div class="scroll"><table class="t"><thead><tr><th>步骤</th><th>谁做</th><th class="r">B 上用时（分钟）</th><th>产出</th></tr></thead><tbody><tr><td>作业启动</td><td>程序：加锁、试调 runner、决定检查在哪台机器跑</td><td class="r">0.5</td><td></td></tr><tr><td>建工作区</td><td>程序</td><td class="r">0.1</td><td>原版的工作树、候选的工作树、计划</td></tr><tr><td>写事实</td><td>模型：撰写者和评审者，54 个会话，8 组同时</td><td class="r">16.5</td><td>303 条事实，写进计划，后来进作者的知识包</td></tr><tr><td>录基线（第一次）</td><td>校验方</td><td class="r">6.6</td><td>每个检查在原版上的结果；敲除矩阵，得出哪些节点缺有效测试</td></tr><tr><td>设计测试：会话和试跑</td><td>模型：设计者和评审者；程序把关、试跑</td><td class="r">52.8</td><td>新测试提交到原版的工作树上</td></tr><tr><td>　同一步里接着：再录一次基线</td><td>校验方</td><td class="r">15.9</td><td>新测试也有了基线。这 15.9 分钟不含在上一行里</td></tr><tr><td>封存</td><td>程序</td><td class="r">0.2</td><td>作者的工作区（契约、知识包、自检）；第一个检查点</td></tr><tr><td>第一版实现</td><td>模型：作者，按 scope 写了两次</td><td class="r">32.8</td><td>草稿</td></tr><tr><td>保存</td><td>程序：查重 → 集成 → 提交</td><td class="r">被拒</td><td>和原版 58% 相同</td></tr><tr><td>重写</td><td>模型：作者</td><td class="r">29.1</td><td>重合度降到 37%</td></tr><tr><td>保存、行为对比、安装检查</td><td>程序、校验方</td><td class="r">1.4</td><td>一个检查没过</td></tr><tr><td>修复</td><td>controller 决定修什么；作者写</td><td class="r">14.5</td><td>再保存、再对比，通过</td></tr><tr><td>选定、交付</td><td>程序</td><td class="r">0.4</td><td>报告、原版测试回放</td></tr></tbody></table></div><p>整个作业一次只做一件事。controller 在 B 里开了 4 轮，共 250 秒。提交之前还有一段由对话里的模型完成的阶段（建测试环境、读证据、出功能图、写清单、试 runner），
+tqdm 上用了 6–12 分钟，和这次的前提关系不大，第二节最后会说。</p><h3>谁在等谁，等的理由是哪一种</h3><p>把每个“必须先做完才能做”的地方分成三种：<span class="kind d">数据</span> 后一步真的要用前一步的产出；<span class="kind i">规矩</span> 为了守某条保证而规定的先后；<span class="kind c">习惯</span> 只是代码或说明书这么排的。
+能动的是后两种里理由已经不成立的那些。</p><div class="scroll"><table class="w"><thead><tr><th>等待</th><th>种类</th><th>新前提下</th></tr></thead><tbody><tr><td>录第一次基线，要等写事实</td><td><span class="kind i">规矩</span> 基线里嵌着计划的摘要，计划里要先有事实。没有哪个检查的结果依赖事实</td><td>事实没有了，这个等待消失</td></tr><tr><td>设计测试，要等写事实</td><td><span class="kind c">习惯</span> 设计者只把事实当标签看</td><td>消失</td></tr><tr><td>设计测试，要等第一次基线</td><td><span class="kind d">数据</span> 哪些节点缺有效测试，是敲除的结果给的</td><td>留下</td></tr><tr><td>第二次录基线，要等测试提交</td><td><span class="kind d">数据</span></td><td>留下</td></tr><tr><td>封存，要等第二次基线</td><td><span class="kind d">数据</span> 加 <span class="kind i">规矩</span></td><td>留下</td></tr><tr><td><b>第一次作者调用，要等整个冻结</b></td><td><span class="kind i">规矩</span> “先冻结完再写”。作者从冻结里真正读到的只有三样：事实、检查要 import 的名字、校验方占用的路径</td><td><b>可以同时。</b>事实不要了。后两样里，原版自带的检查那一部分是对原版静态算出来的，草稿作业自己算一份；设计出的测试带来的那一部分要到主作业封存才有，所以导入时按主作业的那份再核一遍，不合的地方接一次实现调用</td></tr><tr><td>后写的 scope，要等先写的 scope</td><td><span class="kind d">数据</span> 靠读前面写出来的代码了解接口。代码并不强制这个顺序</td><td>接口可以从原版读，部分放开（第四节）</td></tr><tr><td>保存时的查重</td><td><span class="kind i">规矩</span> “是作者自己的实现”</td><td>只量，不拒</td></tr><tr><td>检查、行为对比、安装检查的先后</td><td><span class="kind c">习惯</span></td><td>可以同时，收益很小</td></tr><tr><td>修复，要等对比结果</td><td><span class="kind d">数据</span></td><td>留下</td></tr><tr><td>交付，要等对正是这份代码的完整对比</td><td><span class="kind i">规矩</span> 保证二的第三层</td><td>留下</td></tr><tr><td>原版测试回放放在最后一次作者调用之后</td><td><span class="kind i">规矩</span></td><td>留下</td></tr><tr><td>提交之前：计划、审计、试 runner 排在启动评审页之前</td><td><span class="kind c">习惯</span> 提交时会重新计划，作业开头会重新试</td><td>和新前提无关</td></tr></tbody></table></div><p>今天已经在同时跑的：写事实的 8 组；设计者 8 个、评审者 8 个；敲除 4 个节点一起。只有一个的：作者；controller；一个仓库同时只能有一个作业；
+这台机器上检查一个接一个跑。</p><h2 id="only">二、哪些东西只因“作者看不到源码”而存在</h2><p>三列数字依次是 A、B、D 三次 tqdm 运行的记录。标了“估计”的是推算。</p><div class="scroll"><table class="inv"><thead><tr><th>东西</th><th>记录里的代价</th><th>新前提下</th></tr></thead><tbody><tr><td>写事实这一步</td><td>$51.77 / 50.91 / 48.92；29.4 / 16.5 / 16.2 分钟；50 / 54 / 49 个会话</td><td>整步去掉。开关是现成的设置</td></tr><tr><td>设计出的测试必须附带的事实、场景的一句话说明，以及检查这些文字的门槛和评审</td><td>三次运行共 54 次评审否决，其中 48 次针对这些文字：场景说明没写清调用和取值 21 次，事实没覆盖断言 25 次，事实不准 2 次。始终没被接受的文件 25 / 18 / 20 个，占设计花费的 48% / 40% / 45%。D 的整轮返修（$25.84，19.6 分钟）全是文字问题</td><td>事实去掉。场景只留一个不评审的名字，失败时用来指明是哪个用例。<br>估计：设计这一步从 58.0 / 52.8 / 59.3 分钟降到约 50 / 45 / 34 分钟，$74 / $66 / $92 降到约 $58 / $51 / $52；始终没被接受的文件降到约 10 / 7 / 5 个。要改代码</td></tr><tr><td>作者的知识包</td><td>B：915 条记录里 537 条是事实；作者读到的 49 万字符里 39.4 万是事实。每个大会话开头先读约 47 万字符，占它 13% 的时间、15–19% 的花费</td><td>剩 378 条（327 条接口、51 条行为描述），按作者读到的文件算约 9.6 万字符。tqdm 选中部分的源码是 48 个文件、4.6 万 token，比它替代的事实少，而且是准确的</td></tr><tr><td>防默写的拒绝和随后的重写</td><td>重写 41.3 / 29.1 / 23.4 分钟，$22.06 / 17.19 / 10.62；外加一次被拒的保存和一个 controller 回合（45 / 50 / 144 秒）。A 的作者还自己写了个数行数的脚本，盲查了 9.9 分钟</td><td>按你的决定：从第一次调用起告知，量出来写进报告，不拒绝保存。设置是现成的</td></tr><tr><td>源码只在检查失败后才借，只借失败功能的，每次最多再加 5 个功能，每个作业 15 个</td><td>三次运行各借了一次（那一次修复）；每次修复都在 12–45 秒内打开了借到的文件</td><td>变成一条规则：每次调用可以读它负责的功能、以及这些功能声明依赖的功能的源码文件。只读副本、每次调用的记录、用完收回，都留着</td></tr><tr><td>第一次完整对比之前的 controller 回合</td><td>A 4 轮 133 秒 $2.34；B 3 轮 145 秒 $2.45；D 3 轮 343 秒 $4.29，占 controller 花费的 47–61%</td><td>没有需要它决定的事了（跟着冻结走、scope 的顺序、被拒后的重写），交给固定流程</td></tr><tr><td>后写的 scope 等先写的 scope 的代码</td><td>detectron2（E）：22 个 scope 一个接一个，412.7 分钟，占全程六成；后面的会话各读了前面写的 2–22 个文件</td><td>接口可以从原版读到，部分放开，见第四节</td></tr><tr><td>每次调用都从零开始，不接着上一次的会话</td><td>每次重写或修复先重读 5–11 分钟</td><td>原来的理由（之前的会话看过源码）不成立了，接着上一次的会话成为可能。这一条没有算进任何数字</td></tr><tr><td>小项：docstring 示例的例外和它的上限、“事实缺口”记录、“没有事实的测试”记录、功能图文字里的源码筛查、提示词和报告里所有“没看过源码”的说法</td><td>记录里没有可量的代价</td><td>去掉或改写。报告和记录不能再说作者没看过源码</td></tr><tr><td>提交之前给作者写的行为描述和接口条目</td><td>已经很薄：只算句子本身，51 句行为描述 6.6 千字符，327 条接口 2.5 万字符（就是上面那 378 条）。整个提交前阶段 12.4 / 6.1 / 6.4 分钟</td><td>留着，几乎没得省。接口条目还有另一个用途：它规定了校验方的测试可以从哪些名字进入</td></tr></tbody></table></div><p>合计：只算记录（写事实、重写和它后面那一轮）是 71.5 / 46.5 / 42.1 分钟，占三次运行的 34% / 27% / 21%；74 / 68 / 60 美元，占 41% / 42% / 28%。加上设计里的文字那一项估计，是 79.5 / 54.2 / 67.4 分钟（37% / 31% / 33%）、90 / 83 / 100 美元（50% / 51% / 47%）。</p><h3>留下不动的，以及为什么</h3><ul>
+<li><b>敲除、在原版上通过、重复三次结果一致、够轻。</b>它们证明一个测试真的会失败，和作者看到什么无关。作者能看源码之后，检查是唯一的验收证据，它们更重要了。</li>
+<li><b>测试设计不受任何作者结果影响。</b>设计哪些节点由第一次基线按规则定；校验方有自己的预算和时间窗。</li>
+<li><b>测试对作者保密。</b>检查只按编号告诉作者；校验方占用的路径只告诉路径；作者的自检只查 import，不跑测试；反馈里不带测试源码。</li>
+<li><b>设计和迁移的测试只能从对外契约的名字进入。</b>原因是“测内部名字的测试会把重写锁在原版的结构上”，和作者看不看源码无关。</li>
+<li><b>封存；集成时把受保护的文件放回去；行为对比；安装检查；交付前对正是那份代码的完整对比；交付后的原版测试回放。</b></li>
+<li><b>重合度的测量和每次借阅的记录。</b>不拒绝之后，这两样是报告里唯一说明“交付的代码和原版是什么关系”的东西。</li>
+<li><b>候选能往反馈里写多少字的上限。</b>候选的输出是它自己选的文字，谁看源码都一样。</li>
+</ul><h2 id="new">三、简化后的流程</h2><p>上面是今天的一个作业，每一步标了它在新流程里的去向。下面是新流程：两个作业同时开始，在主作业封存之后合流。</p><div class="lane"><h4>今天 <span>一个作业，一步接一步</span></h4><div class="flow"><div class="st gone"><b>写事实</b><small>16–29 分钟，约 $50</small><span class="tg">去掉</span></div><div class="st less"><b>录基线</b><small>7 分钟</small><span class="tg">变短：2.5 分钟（第一档 A1）</span></div><div class="st less"><b>设计测试</b><small>53–59 分钟</small><span class="tg">变短：不再写给作者的文字</span></div><div class="st less"><b>再录基线</b><small>16–23 分钟，今天和设计测试是同一步</small><span class="tg">变短，成为单独一步（A1、A4）</span></div><div class="st "><b>封存</b><small>不到半分钟</small><span class="tg">不变</span></div><div class="st gone"><b>controller 回合</b><small>第一次对比前 3–4 轮</small><span class="tg">去掉</span></div><div class="st "><b>第一版实现</b><small>33–57 分钟</small><span class="tg">挪到草稿作业，和冻结同时</span></div><div class="st gone"><b>保存被拒、重写</b><small>23–41 分钟</small><span class="tg">去掉：只量不拒</span></div><div class="st "><b>保存、对比、安装</b><small>约 1.5 分钟</small><span class="tg">不变</span></div><div class="st "><b>修复</b><small>controller 决定</small><span class="tg">不变</span></div><div class="st "><b>交付</b><small></small><span class="tg">不变；报告写明查阅过原版</span></div></div></div><div class="lanes"><div class="lane"><h4>主作业 <span>校验方，检查在计算节点上跑</span></h4><div class="flow"><div class="st "><b>建工作区</b><small></small></div><div class="st "><b>录基线</b><small>敲除只做声明的那几对</small></div><div class="st "><b>设计测试</b><small>所有目标一次设计完；不写给作者的文字</small></div><div class="st "><b>再录基线</b><small>单独一步</small></div><div class="st "><b>封存</b><small>从这里起测试不再变</small></div></div></div><div class="lane"><h4>草稿作业 <span>只写第一版，没有 controller</span></h4><div class="flow"><div class="st "><b>建工作区、录一次不带敲除的基线、封存</b><small>不写事实，不设计测试</small></div><div class="st new"><b>第一版实现</b><small>作者从空工作区写；可以读它负责的功能和所依赖功能的源码；被告知会比对</small><span class="tg">新：从第一次调用起借源码</span></div><div class="st new"><b>保存，报“草稿完成”</b><small>不交付</small><span class="tg">新：终态</span></div></div></div></div><div class="join">↓ 合流：主作业封存之后，等草稿完成，导入 ↓</div><div class="lane"><h4>主作业，合流之后 <span></span></h4><div class="flow"><div class="st new"><b>导入草稿</b><small>核对三个摘要和每个文件；记进台账</small><span class="tg">新</span></div><div class="st "><b>保存、集成、行为对比、安装检查</b><small>重合度在这里由主作业自己再量一次</small></div><div class="st "><b>修复</b><small>对比没过才有 controller</small></div><div class="st "><b>选定、交付</b><small>报告写明：查阅过原版、借了多少文件、打开了多少、重合度、体积</small></div></div></div><h3>作者拿到什么，被告知什么</h3><ul>
+<li>从空工作区开始，按功能图和契约自己设计模块和函数，用最少的代码实现选中的功能。</li>
+<li>这次调用负责的功能、以及这些功能声明依赖的功能，它们的原版源码文件放在工作区里一个只读目录下。记录说不清的地方（一个行为、一处精确的输出、别的代码要依赖的接口）可以去读。</li>
+<li>不许把文件、函数体、注释、docstring 抄过来；不许 import 或运行借来的文件；不必照搬原版的文件布局和辅助函数。</li>
+<li>从第一次调用起就被告知：写的每个文件都会和原版逐行比较。</li>
+<li>借出的范围按体积清单来，只有源码和配置，没有测试、文档和启动脚本。还要再排除两样，现在的代码没有排除：被某个检查按名字运行的测试模块
+（有的项目把测试文件放在代码旁边，它算在体积清单里），以及封存清单保护的路径。</li>
+<li>“不懂再查”没法强制，只能观察。每次调用借了几个文件、会话实际打开了几个、重合度是多少，都记下来，写进报告。</li>
+</ul><h3>合流点的规则</h3><ol>
+<li><b>导入只发生在主作业封存之后。</b>封存之后不再设计测试，所以草稿作业的任何东西都进不了测试。现在的代码已经是这样保证的：实现工作区只能从封存的产物建出来。</li>
+<li><b>导入是一个会等的操作。</b>它等草稿作业报“草稿完成”，有时限，可以暂停和取消。只有草稿作业失败、被暂停或超时，主作业才自己写第一版。
+我最初写的是“看一眼有没有保存好的候选，没有就自己写”。评审指出这不行：冻结变短之后草稿常常晚到，主作业会白白再付一份第一版。</li>
+<li><b>草稿作业有一个明确的终态“草稿完成”，不交付。</b>导入拿的是这个状态下的候选，并记下它包含哪些 scope。</li>
+<li><b>导入前核对。</b>两个作业的提交、清单、选择，三个摘要一致；每个文件的摘要和草稿作业检查点里封存的一致。落在主作业受保护路径上的文件要在结果里点名，不能悄悄丢掉。</li>
+<li><b>导入记成一次“第一版实现”。</b>这样，如果集成拒绝了导入的文件（比如它占了一个设计出的测试的路径），后面接的是一次被告知“这些路径归校验方”的实现调用，而不是一个没有定义的重试。</li>
+<li><b>导入之后一切照旧。</b>主作业自己再量一次重合度，然后保存、集成、对比。草稿作业的任何对比结果都不算证据。主作业的报告要把草稿作业的借阅记录和作者用量带上，否则报告里写的“作者读过的文件”会比实际少。</li>
+<li><b>导入是带请求号的一次性操作。</b>恢复运行时不会再导入一次，把已经做的修复盖掉。</li>
+<li><b>两个作业的查重设置和借源码设置必须一致。</b>否则主作业保存时会拒绝草稿作业被允许写出来的东西，主作业里的修复也借不到同样的源码。</li>
+</ol><h3>检查放在哪里跑</h3><p>你说可以把两者之一放到计算节点上。建议放的是<b>主作业的检查</b>（录基线、试跑、对比），所有模型会话都留在登录机上。理由有三个。
+一，这是现成的机制，而节点能不能连上模型服务没有确认过。二，检查的计时在节点上稳得多：此前在这个集群上量过，计时噪声在节点上是 0.2–2.3%，在登录机上是 70–590%。
+三，也是最要紧的：两个作业挤在只有 4 个核的登录机上时，作者自己跑测试的负载会影响试跑里“够不够轻”“三次结果是否一致”这两道门槛，
+等于作者的活动在影响哪些测试被接受。检查放到节点上，这条路就断了。</p>
+<p>放到节点上之前有四件事要办，否则反而更慢或更危险。前两件是现成选项的默认值不合适，配对时要设对；后两件要改代码。</p><ul>
+<li><b>CPU 数。</b>默认只申请 1 个，而敲除要 4 个一起跑。申请数是现成的选项；让敲除的并发数跟着分配走，要改代码。</li>
+<li><b>空闲多久释放节点。</b>默认 300 秒，而设计者的会话要 10–14 分钟，于是每次录基线、每次试跑都要重新排队。tqdm 一次冻结大约六批，每批排两分钟就是 12 分钟。
+这个时间是现成的选项，最长可以设到一小时，足够让整个冻结用同一个分配。</li>
+<li><b>申请的时长。</b>现在每一批都按最坏情况申请，通常是 240 分钟的上限，排队会很久。负责人可以手动设一个值；要按实测时长自动申请，得改代码。</li>
+<li><b>节点不可用时怎么办。</b>配对时用“只在节点上跑”，不用“自动”：自动模式在排队超过 120 秒时会把检查悄悄挪回登录机。而“只在节点上跑”时，节点不可用应该是“等”。
+现在的代码在冻结里遇到这种情况会让作业结束、丢掉整个冻结，在试跑里遇到则会当成“设计停止”，带着缺口封存。这要改代码。</li>
+</ul><p>排队堵住的时候，校验链等着，草稿照常写。并行的收益变小，正确性不受影响。</p>
+<p>草稿作业自己的那次基线在登录机上跑。它不产生任何证据，所以碰不到保证一；tqdm 上是 2.7 分钟，detectron2 上是 36 分钟的检查，会占着登录机的核。</p><h3>改动清单，按大小</h3><div class="scroll"><table class="plan"><thead><tr><th>大小</th><th>改动</th></tr></thead><tbody><tr><td>不用改代码</td><td>不写事实；从第一次调用起告知并且不拒绝保存；设计者同时开工的数量；检查放到计算节点。四样都是现成的设置</td></tr><tr><td>小</td><td>借源码的第三种方式：每次调用都给它负责的功能和所依赖功能的源码文件，排除测试模块和受保护路径，记录里写明被截掉了什么、会话打开了几个文件</td></tr><tr><td>小</td><td>作者提示词和报告的措辞：不再说没看过源码</td></tr><tr><td>小</td><td>断言的对比值从第一次对比起就给作者。现在它只在“失败后才借源码”的设置下给</td></tr><tr><td>小</td><td>导入：实现工作区多一种起点（配对作业的候选），连同核对和台账</td></tr><tr><td>小</td><td>配对的配置：角色、对方的作业号、一致的查重和借源码设置；把对方的仓库副本和状态目录加进各自会话看不到的路径</td></tr><tr><td>小</td><td>草稿作业的终态；校验方的临时目录放到作者看不到的路径下</td></tr><tr><td>小</td><td>controller 多一条准入：还没有完整对比的记录就不开回合；固定流程补三条规则（第六节）</td></tr><tr><td>中</td><td>测试设计去掉写给作者的文字：数据格式、事实和测试的绑定、事实的门槛、场景说明、评审提示词、报告。这是校验方一侧最大的一处改动</td></tr><tr><td>中</td><td>主作业的固定流程：等待并导入。草稿作业的固定流程：写完即停</td></tr><tr><td>中</td><td>协调：两个作业一起提交；取消和暂停互相传递；token 上限在提交时分好</td></tr><tr><td>中</td><td>检查执行器：按实测时长申请；敲除的并发数跟着分配走；节点不可用时等待（上一小节。CPU 数和释放时间只是设置）</td></tr><tr><td>中</td><td>进度页：一条导入事件，加一个指向草稿作业页面的链接。第二条泳道可以以后再做</td></tr><tr><td>不做</td><td>一个仓库里同时跑两个作业（要重做锁）；没有基线的草稿作业；把草稿作业放到节点上；每个节点的测试写完就单独试跑</td></tr></tbody></table></div><h2 id="par">四、哪些可以同时跑</h2><div class="scroll"><table class="w"><thead><tr><th>哪两样同时</th><th>今天为什么不行</th><th>新前提下</th><th>值多少</th></tr></thead><tbody><tr><td>第一版代码，和整个冻结</td><td>作者的输入（主要是事实）是冻结的产物；一个作业一次只做一件事</td><td><b>可以</b>，用两个作业</td><td>tqdm：整个作业短 33–41 分钟，就是第一版原来排在冻结后面的那一段。detectron2：短 120 分钟</td></tr><tr><td>第二次录基线，和草稿</td><td>同上</td><td>可以：两个作业本来就重叠，不需要别的改动。A4 的用处在别处，见第七节</td><td>含在上一行里</td></tr><tr><td>所有 scope 同时写</td><td>后写的要读先写的代码才知道接口</td><td>部分可以，见下面</td><td>detectron2：413 分钟降到 107–228 分钟，没验证过</td></tr><tr><td>所有设计者同时开工</td><td>默认 8 个同时；tqdm 有 10 个目标，A、B 里最后两个晚了约 6 分钟才开始</td><td>和新前提无关，是个现成的设置</td><td>第一轮从 14.3–14.6 分钟降到 10.6 分钟（D 就是这样跑的）</td></tr><tr><td>试跑一结束就按节点分批评审</td><td>评审按 8 个文件一批，按文件顺序分</td><td>和新前提无关</td><td>只省掉等最慢那一批评审的时间，几分钟</td></tr><tr><td>安装检查，和行为对比</td><td>一次只做一件事。它们之间没有任何保证要守</td><td>可以</td><td>tqdm 16 秒；detectron2 每轮约 2 分钟</td></tr><tr><td>提交之前：装测试环境，和读证据、出图、写清单</td><td>说明书里写的顺序</td><td>和新前提无关</td><td>约 2 分钟</td></tr></tbody></table></div><p><b>不能同时的。</b></p><ul>
+<li>两次录基线：第二次要等测试提交。</li>
+<li>封存早于第二次录基线：封存只接受对比时会用到的那一份基线。</li>
+<li>测试设计内部的链：设计者、试跑、评审、返修、试跑、第二次评审、最后一起试跑。B 上依次是 14.3、4.8、9.7、9.7、1.3、10.8、2.2 分钟，每一环都要前一环的结果。
+新流程里，这条链是 tqdm 上最长的一段。</li>
+<li>“每个节点的测试写完就单独试跑、单独评审”。我在草案里写过，评审否掉了：试跑共用一棵工作树，一次只能跑一个；每次试跑有 20–50 秒的固定开销；
+最后的合跑会变成每次必做，而且排在付费的评审之后；被实质性否决而重开的那一轮也没算进去。</li>
+</ul>
+<p>模型会话之间不互相拖慢：单独跑和 5–9 个同时跑，都是每秒约 95 个输出 token。所以 4 个作者加 8 个设计者同时跑，瓶颈不在模型，在 token 上限、服务的速率限制和跑检查的那 4 个核。</p><h3>多个 scope 同时写：能省多少，前提是什么</h3><p>用现在的切分和分层算 E 的计划（22 个 scope，72 条依赖），4 个作者：</p><div class="scroll"><table class="t"><thead><tr><th>写法</th><th class="r">第一版实现（分钟）</th><th class="r">整个作业（分钟）</th><th>说明</th></tr></thead><tbody><tr><td>一个接一个</td><td class="r">412.7</td><td class="r">572</td><td>第一版的时长是 E 的记录；整个作业是拼出来的推算</td></tr><tr><td>按层写：一层里的 scope 同时写，共 9 层</td><td class="r">228.3</td><td class="r">387</td><td>机制是现成的（现在的并行模式）。数字是把 E 的会话时长按层排出来的，没有算合并和重写。每层的时长是它最慢的那个 scope，加再多作者也不会更快</td></tr><tr><td>最底下 3 个依次写，其余 19 个同时</td><td class="r">144.1</td><td class="r">303</td><td>要新的分阶段方式</td></tr><tr><td>22 个全部同时</td><td class="r">106.9</td><td class="r">279</td><td>这时最长的已经是校验链，再多作者也没用。一组最多 20 个请求，所以实际要分两组</td></tr></tbody></table></div><p>后三行都没有记录。唯一一次真的分阶段并行写的是 D（tqdm），它比一个作者更慢、更贵（见下）。后两行另有五个没验证的前提：</p><ul>
+<li>22 个 scope 里有 19 个被别的 scope 依赖。“先写地基，再写其余”里的地基划不干净。</li>
+<li>同时写的作者没法运行自己的代码：它 import 的兄弟模块还没人写，而借来的原版不许 import。E 的会话里，跑自己的测试最多占一个会话 21% 的时间。
+要么先有一次“骨架调用”，把模块布局和跨功能的签名写成空壳；要么允许 import 借来的原版，那就成了在原版代码上测试。</li>
+<li>两个作者写了同一个文件时，后一个要把整个 scope 重写，而且一次只重写一个。E 上一个 scope 平均 18.8 分钟，最长 37.2 分钟。没有 19 个一起合并的记录。</li>
+<li>要求“别人依赖的名字和签名保持原样”，等于把原版的内部结构固定在每一条依赖上，代价是体积。E 交付的是原版体积的 98.4%。</li>
+<li>E 的会话以写为主（思考占输出的 32%），A、B、D 是 52–72%。同样的 scope 用后者的设置会更久。</li>
+</ul>
+<p><b>tqdm 用不上这一条。</b>默认的 scope 大小下它是一个 4.3 万 token 的 scope 加一组开发脚本。B 用一个作者写了 27.6 + 5.2 分钟、$18.74；D 分阶段并行写了 57.0 分钟、$50.33。
+不再有重写之后，一个作者是最便宜、也几乎最快的写法。这个规模的项目，收益来自不再重写，不来自并行写。</p><h2 id="time">五、时间和花费</h2><p>下面每一行在上一行的基础上再加一步。除“今天”是记录外，全部是用旧记录拼出来的推算：把不再发生的部分扣掉，把能同时的部分并起来。没有任何一次运行是在新前提下跑的。</p><div class="scroll"><table class="t"><thead><tr><th>tqdm，分钟</th><th class="r">A</th><th class="r">B</th><th class="r">D</th></tr></thead><tbody><tr><td>今天（记录）</td><td class="r">212.9</td><td class="r">173.5</td><td class="r">203.6</td></tr><tr><td>① 第一档做完，作者仍然看不到源码</td><td class="r">174.2</td><td class="r">144.2</td><td class="r">170.6</td></tr><tr><td>② 加上：可查源码、不写事实、不打回。一个作业，串行</td><td class="r">117.9</td><td class="r">104.6</td><td class="r">136.6</td></tr><tr><td>③ 加上：测试设计不再写给作者的文字</td><td class="r">109.9</td><td class="r">96.9</td><td class="r">111.3</td></tr><tr class="sum"><td>④ 加上：第一版和冻结同时（两个作业；不含节点排队）</td><td class="r">71.0</td><td class="r">64.1</td><td class="r">70.4</td></tr><tr class="sub"><td>④ 里的校验链：建工作区、两次录基线、设计、封存</td><td class="r">59.9</td><td class="r">53.2</td><td class="r">44.2</td></tr><tr class="sub"><td>④ 里的作者链：自己的基线和封存、第一版</td><td class="r">42.1</td><td class="r">36.0</td><td class="r">60.2</td></tr><tr class="sub"><td>④ 里合流之后：保存、对比、修复、交付</td><td class="r">11.2</td><td class="r">10.9</td><td class="r">10.2</td></tr></tbody></table></div><p><b>推算用到的假设，每条只用一次：</b></p><ul>
+<li>敲除只做声明的那几对（A1）：第一次录基线 2.5 分钟；设计之后那一次乘 0.28，B 是 15.9 → 4.5，A、D 是 6.1、6.4。</li>
+<li>写事实的三处改进（C2）：29.4 / 16.5 / 16.2 → 15 / 10.5 / 10.5 分钟。只用在 ① 里，② 起没有这一步。</li>
+<li>修复时让作者知道差在哪（D1）：修复里作者的时间，A 从 7.5 降到 4 分钟，B 从 10.8 降到 4 分钟。① 到 ④ 都用了。不用这一条，④ 是 74.5 / 70.9 / 70.4 分钟。</li>
+<li>被拒之后那一轮 controller：45 / 50 / 144 秒，① 起不再有。</li>
+<li>A3 的两个缺陷：D 少 4 分钟。</li>
+<li>设计不再写给作者的文字：这一步 58.0 / 52.8 / 59.3 → 50 / 45 / 34 分钟（第二节的估计）。</li>
+<li>草稿作业自己的基线和封存：2.7 分钟。</li>
+<li>detectron2：两次录基线按 60 和 63 分钟；事实乘 0.6（只在 ①）；E 里三次重复的录基线 115.9 分钟不再发生（A2）；草稿作业自己的基线 36.3 分钟（E 那次不带敲除的记录）。
+测试设计的估计没有套用在 detectron2 上。</li>
+</ul><figure class="viz-root" style="margin-left:0;margin-right:0"><div class="cap">B 那次 tqdm：今天，和新流程</div><div class="sub">今天是记录；新流程是推算（上表的 ④）。检查在节点上的排队没有画。</div><div class="legend"><span><i style="background:var(--s1)"></i>校验方的模型会话：写事实、设计和评审测试</span><span><i style="background:var(--s2)"></i>作者的模型会话：第一版、修复</span><span><i style="background:var(--s3)"></i>跑检查：录基线、对比、安装</span><span><i style="background:var(--s4)"></i>其他：排队、建工作区、封存、保存、controller、交付</span><span><i style="background:var(--s5)"></i>返工：防默写后的重写</span><span><i style="background:repeating-linear-gradient(45deg,transparent 0 3px,var(--mut) 3px 5px);border:1px dashed var(--mut)"></i>等待</span></div><div class="rl"><b>今天</b> · 一个作业 · <b>173.5 分钟</b></div><div class="track g" style="background-size:16.6667% 100%"><div class="gseg s4" style="left:0.000%;width:0.678%" tabindex="0" role="img" aria-label="今天，排队和准备：1.2 分钟" data-r="今天" data-n="排队和准备" data-v="1.2 分钟"></div><div class="gseg s1" style="left:0.678%;width:9.172%" tabindex="0" role="img" aria-label="今天，写事实：16.5 分钟" data-r="今天" data-n="写事实" data-v="16.5 分钟"></div><div class="gseg s3" style="left:9.850%;width:3.672%" tabindex="0" role="img" aria-label="今天，录基线：6.6 分钟" data-r="今天" data-n="录基线" data-v="6.6 分钟"></div><div class="gseg s1" style="left:13.522%;width:29.317%" tabindex="0" role="img" aria-label="今天，设计测试（含试跑）：52.8 分钟" data-r="今天" data-n="设计测试（含试跑）" data-v="52.8 分钟"></div><div class="gseg s3" style="left:42.839%;width:8.856%" tabindex="0" role="img" aria-label="今天，再录基线：15.9 分钟" data-r="今天" data-n="再录基线" data-v="15.9 分钟"></div><div class="gseg s2" style="left:51.694%;width:18.217%" tabindex="0" role="img" aria-label="今天，第一版：32.8 分钟" data-r="今天" data-n="第一版" data-v="32.8 分钟"></div><div class="gseg s5" style="left:69.911%;width:16.178%" tabindex="0" role="img" aria-label="今天，重写：29.1 分钟" data-r="今天" data-n="重写" data-v="29.1 分钟"></div><div class="gseg s4" style="left:86.089%;width:2.011%" tabindex="0" role="img" aria-label="今天，保存、对比、安装、controller：3.6 分钟" data-r="今天" data-n="保存、对比、安装、controller" data-v="3.6 分钟"></div><div class="gseg s2" style="left:88.100%;width:8.033%" tabindex="0" role="img" aria-label="今天，修复（含对比）：14.5 分钟" data-r="今天" data-n="修复（含对比）" data-v="14.5 分钟"></div><div class="gseg s4" style="left:96.133%;width:0.244%" tabindex="0" role="img" aria-label="今天，交付：0.4 分钟" data-r="今天" data-n="交付" data-v="0.4 分钟"></div></div><div class="gl">排队和准备 1.2 → 写事实 16.5 → 录基线 6.6 → 设计测试（含试跑） 52.8 → 再录基线 15.9 → 第一版 32.8 → 重写 29.1 → 保存、对比、安装、controller 3.6 → 修复（含对比） 14.5 → 交付 0.4</div><div class="rl"><b>新流程 · 主作业</b> · 校验方，然后是合流之后的一切 · <b>64.1 分钟</b></div><div class="track g" style="background-size:16.6667% 100%"><div class="gseg s4" style="left:0.000%;width:0.678%" tabindex="0" role="img" aria-label="新流程 · 主作业，排队和准备：1.2 分钟" data-r="新流程 · 主作业" data-n="排队和准备" data-v="1.2 分钟"></div><div class="gseg s3" style="left:0.678%;width:1.389%" tabindex="0" role="img" aria-label="新流程 · 主作业，录基线：2.5 分钟" data-r="新流程 · 主作业" data-n="录基线" data-v="2.5 分钟"></div><div class="gseg s1" style="left:2.067%;width:25.000%" tabindex="0" role="img" aria-label="新流程 · 主作业，设计测试（含试跑）：45.0 分钟" data-r="新流程 · 主作业" data-n="设计测试（含试跑）" data-v="45.0 分钟"></div><div class="gseg s3" style="left:27.067%;width:2.480%" tabindex="0" role="img" aria-label="新流程 · 主作业，再录基线：4.5 分钟" data-r="新流程 · 主作业" data-n="再录基线" data-v="4.5 分钟"></div><div class="gseg s4" style="left:29.546%;width:1.548%" tabindex="0" role="img" aria-label="新流程 · 主作业，导入、保存、对比、安装：2.8 分钟" data-r="新流程 · 主作业" data-n="导入、保存、对比、安装" data-v="2.8 分钟"></div><div class="gseg s2" style="left:31.094%;width:4.256%" tabindex="0" role="img" aria-label="新流程 · 主作业，修复（含对比）：7.7 分钟" data-r="新流程 · 主作业" data-n="修复（含对比）" data-v="7.7 分钟"></div><div class="gseg s4" style="left:35.350%;width:0.244%" tabindex="0" role="img" aria-label="新流程 · 主作业，交付：0.4 分钟" data-r="新流程 · 主作业" data-n="交付" data-v="0.4 分钟"></div></div><div class="gl">排队和准备 1.2 → 录基线 2.5 → 设计测试（含试跑） 45.0 → 再录基线 4.5 → 导入、保存、对比、安装 2.8 → 修复（含对比） 7.7 → 交付 0.4</div><div class="rl"><b>新流程 · 草稿作业</b> · 和主作业同时开始 · <b>第 53.2 分钟合流</b></div><div class="track g" style="background-size:16.6667% 100%"><div class="gseg s4" style="left:0.000%;width:0.294%" tabindex="0" role="img" aria-label="新流程 · 草稿作业，排队：0.5 分钟" data-r="新流程 · 草稿作业" data-n="排队" data-v="0.5 分钟"></div><div class="gseg s3" style="left:0.294%;width:1.500%" tabindex="0" role="img" aria-label="新流程 · 草稿作业，自己的基线和封存：2.7 分钟" data-r="新流程 · 草稿作业" data-n="自己的基线和封存" data-v="2.7 分钟"></div><div class="gseg s2" style="left:1.794%;width:18.217%" tabindex="0" role="img" aria-label="新流程 · 草稿作业，第一版：32.8 分钟" data-r="新流程 · 草稿作业" data-n="第一版" data-v="32.8 分钟"></div><div class="gseg wait" style="left:20.011%;width:9.535%" tabindex="0" role="img" aria-label="新流程 · 草稿作业，等主作业封存：17.2 分钟" data-r="新流程 · 草稿作业" data-n="等主作业封存" data-v="17.2 分钟"></div></div><div class="gl">排队 0.5 → 自己的基线和封存 2.7 → 第一版 32.8 → 等主作业封存 17.2</div><div class="axis"><span style="left:0.000%">0</span><span style="left:16.667%">30</span><span style="left:33.333%">60</span><span style="left:50.000%">90</span><span style="left:66.667%">120</span><span style="left:83.333%">150</span><span style="left:100.000%">180</span></div><div class="gl">横轴是分钟。每条下面的一行是同样的内容的文字版。</div></figure><p><b>这些数字没有算进去的：</b></p><ul>
+<li><b>第一版用的是旧记录的时长。</b>旧的第一版是照着事实写的，没被告知会比对。新的第一版读源码、没有事实、被告知。更快还是更慢，没量过，也没有记录能比较被告知和没被告知的第一版。
+唯一沾边的是：被告知之后的重写会话，用时是没被告知的初稿的 1.05–1.28 倍，但重写是另一种任务。</li>
+<li><b>修复用的是旧记录，再按 D1 的估计缩短。</b>旧记录里第一次对比跑的是重写之后的代码，重写的会话自己跑过 6–15 次测试、改了 2–23 个文件。第一稿直接去对比会挂几个检查，没有记录。
+D1 还没实现，而且没有事实之后修复可能更难（第八节第 5 条）。修复按原记录算，④ 是 74.5 / 70.9 / 70.4 分钟。</li>
+<li><b>④ 里 A、B 的校验链比作者链长 17–18 分钟。</b>也就是说第一版可以慢这么多而不影响总时长；反过来，冻结最多再缩短这么多还有用，再短就由第一版的时长决定了，而那正是没量过的数。
+D 的作者链已经比校验链长，因为它的第一版是分阶段并行写的。</li>
+<li><b>排队。</b>整个冻结保持一个分配，是排一次队；每批重新排，tqdm 上大约多 12 分钟。</li>
+<li><b>被接受的测试会变多</b>（始终没被接受的文件从 25 / 18 / 20 个降到约 10 / 7 / 5 个），检查也就多出大约 15 / 11 / 15 个，第二次录基线和每次对比会长五分之一到四分之一。量不大，但方向和别的相反。</li>
+<li>第一次对比之前剩下的 controller 回合（1.5–3.3 分钟）没有扣。</li>
+<li>D 的第一版是分阶段并行写的（57.0 分钟）。换成 B 那样一个作者，D 的 ④ 约 54 分钟。</li>
+</ul><h3>模型花费</h3><div class="scroll"><table class="t"><thead><tr><th>tqdm，美元</th><th class="r">A</th><th class="r">B</th><th class="r">D</th></tr></thead><tbody><tr><td>今天（记录）</td><td class="r">$179.11</td><td class="r">$161.55</td><td class="r">$211.94</td></tr><tr><td>去掉写事实</td><td class="r">−$51.77</td><td class="r">−$50.91</td><td class="r">−$48.92</td></tr><tr><td>去掉重写</td><td class="r">−$22.06</td><td class="r">−$17.19</td><td class="r">−$10.62</td></tr><tr><td>设计不再写给作者的文字（估计，取整）</td><td class="r">约 −$16</td><td class="r">约 −$15</td><td class="r">约 −$40</td></tr><tr><td>第一次对比之前的 controller 回合</td><td class="r">−$2.34</td><td class="r">−$2.45</td><td class="r">−$4.29</td></tr><tr class="sum"><td>新流程（推算）</td><td class="r">约 $87</td><td class="r">约 $76</td><td class="r">约 $108</td></tr></tbody></table></div><p>D 的第一版花了 $50.33，是分阶段并行写的；一个作者约 $19，那样 D 约 $77。没有算的：节点的机时；作者读源码而不是读事实对花费的影响（读得少了，方向是省）；修复次数的变化。</p><h3>python-dotenv：小项目不用两个作业</h3><p>G 里并行关的那一次：39.3 分钟里有 17.8 分钟在写事实。新流程串行就是约 22 分钟，$32.32 降到约 $12。两个作业只再省 1 分钟，因为它的校验链只有 4 分钟（没有需要设计测试的节点）。</p><h3>detectron2</h3><p>没有一次 detectron2 运行同时有冻结和实现的记录，下面是把 F 的冻结和 E 的实现拼起来。两次用的不是同一份契约（F：137 个检查、89 个节点；E：160 个检查、没有敲除），
+F 的第二次录基线还被取消打断了，所以“今天”那一列是下限。</p><div class="scroll"><table class="t"><thead><tr><th>detectron2，分钟</th><th class="r">今天</th><th class="r">① 第一档</th><th class="r">② 串行</th><th class="r">④ 两个作业</th></tr></thead><tbody><tr><td>校验链</td><td class="r">591.6</td><td class="r">176.1</td><td class="r">156.4</td><td class="r">156.4</td></tr><tr><td>22 个 scope 的第一版</td><td class="r">412.7</td><td class="r">412.7</td><td class="r">412.7</td><td class="r">449.0，和校验链同时</td></tr><tr><td>之后：对比、修复、交付</td><td class="r">238.6</td><td class="r">122.7</td><td class="r">122.7</td><td class="r">122.7</td></tr><tr class="sum"><td>合计</td><td class="r">1,243 以上</td><td class="r">711</td><td class="r">692</td><td class="r">572</td></tr></tbody></table></div><p>两点要看清。一，新前提本身在 detectron2 上能直接省多少，记录说不出来。E 跑的时候还没有防默写这道检查，所以它没有重写可以拿来比（它的第一次保存因为别的原因被拒过一次，后面跟了 5 分钟的作者调用）；
+“今天”那一列里也就没有重写。事实那一步是 33 分钟。能确定的大头来自第一档的 A1（一次基线从 5.5 小时到约 1 小时）和并行。
+二，④ 的 572 分钟里 scope 还是一个接一个写的。按层写是 387 分钟，机制现成，数字没有记录；更激进的写法在上一节，279–303 分钟，前提没验证。</p><h2 id="ctl">六、controller、flexible 和并行模式还剩什么</h2><p>大体流程由三处等待决定：测试要在对比之前定下来；作者要等冻结；修复要等对比。flexible 改的是“下一步由谁决定、怎么组合”，这三处它都碰不到。
+新前提去掉了中间那一处。剩下的两处之间，第一次完整对比之前的每一步都能由规则算出来。</p><div class="scroll"><table class="w"><thead><tr><th>机制</th><th>今天</th><th>新流程</th></tr></thead><tbody><tr><td>controller 回合</td><td>每一步之前都可以有。tqdm 一次 4–7 轮</td><td>第一次完整对比没过之后才有</td></tr><tr><td>冻结里的决定：设计哪些节点、分几次、要不要重录</td><td>controller 可以选</td><td>固定：所有目标一次设计完。controller 在封存之前不出场，也就不可能用它的选择影响测试，保证一在这一点上不再需要额外的规则</td></tr><tr><td>第一版实现的决定：scope 的顺序、给作者的指令</td><td>controller 定。D 里它自己安排的分阶段写法反而是慢的那种</td><td>固定：按计划的 scope</td></tr><tr><td>被拒之后安排重写</td><td>controller</td><td>不存在</td></tr><tr><td>修复：修哪些、一起还是分开、目标是什么</td><td>controller</td><td>controller，不变</td></tr><tr><td>并排试几个版本；停下来恢复最好的候选；去问负责人</td><td>controller</td><td>controller，不变</td></tr><tr><td>条件、委托、证据复用、可以关掉的缺口、“能到的最好状态”</td><td>全程可用</td><td>用在修复和交付阶段</td></tr><tr><td>实现工作区</td><td>controller 创建</td><td>导入就是它的一种起点</td></tr><tr><td>并行模式的拆分和合并</td><td>controller 安排，或固定流程按层</td><td>多 scope 项目的第一版，由固定流程驱动</td></tr><tr><td>并行模式的多版本试探</td><td>可用</td><td>留着，但 A、B、D 里没有一次修复用过它</td></tr><tr><td>冻结预留、给修复多借几个功能的参数、guide 里讲重写的段落</td><td>有</td><td>去掉。guide 有 5.8 万字符，其中讲冻结和第一版实现的部分可以删</td></tr></tbody></table></div><p>有三个地方今天是停下来等 controller 拿主意的，没有 controller 之后要在固定流程里写成规则：基线不能用，重录一次，还不行就暂停等负责人；基线过期，重录；
+还有没设计的目标，一次全做，做不出来的带着缺口封存。草稿作业完全没有 controller。</p>
+<p>你定的第一档里，E1 保留了第一轮（17–20 秒）。新流程把它也去掉了。这是对你已定条目的一个小改动，列在第十节。</p><h2 id="items">七、你选的那几条在新前提下</h2><div class="scroll"><table class="w"><thead><tr><th>条目</th><th>新前提下</th></tr></thead><tbody><tr><td>A1 敲除只做检查声明的那几对</td><td>照做。它是 detectron2 上最大的一项，和新前提无关</td></tr><tr><td>A2 目录链接量进基线指纹</td><td>照做</td></tr><tr><td>A3 合并后那次运行暴露的两个缺陷</td><td>已经在 main 上了（上一份报告之后合并的那个修复）</td></tr><tr><td>A4 设计测试到提交为止，再录基线成为单独一步</td><td>照做，而且更必要：单独一步才能在节点出问题时等待和重做，才能报告进度</td></tr><tr><td>C1 测试设计里评审和门槛互相打架</td><td>场景按函数给结论、说明的长度、点了测试名字的事实，这三处没有对象了：这些文字不存在了。留下三处照做：把测试环境的命令和已装的包告诉评审者；文件全部“没评审到”的节点再送审一次；给设计者一个静态检查脚本（记录里 14 次静态拒绝有 7 次还会发生）</td></tr><tr><td>C2 写事实的三处改进</td><td>整条没有对象了：没有写事实这一步</td></tr><tr><td>D1 修复时让作者知道差在哪</td><td>第 3 部分（给探针写事实）没有对象了。其余照做，而且更重要：没有事实之后，一个没过的检查只告诉作者功能名、错误类型、它自己代码里的位置和对比的值</td></tr><tr><td>E1 controller 瘦上下文、少几轮</td><td>瘦上下文、首次修复可以委托、体积优化的规则，照做。“被拒之后那一轮”不再发生。新增：第一次完整对比之前不开回合</td></tr><tr><td>B1，按你改的：告知，但不打回</td><td>现成的设置。那句话怎么写，见第十节第 3 件</td></tr></tbody></table></div><p>C2 和 C1 讲文字的部分，只在还保留“作者看不到源码”这种模式时才有用。留不留那种模式，是第十节的第 2 件。</p><h2 id="risk">八、风险和还没量过的</h2><ol>
+<li><b>没有一次运行是在新前提下跑的。</b>不知道的有四样：体积（看不到源码时，四次 tqdm 交付的是原版的 44–49%）；只吓唬、不打回时的重合度；第一稿在第一次对比里挂几个检查；第一版要写多久。</li>
+<li><b>检查成了防“删行为”的唯一防线。</b>以前，没有测试覆盖的行为作者根本不知道；现在作者看得见，在体积目标下可以决定不要它，而且不会有任何检查失败。覆盖面比以前更要紧。</li>
+<li><b>换个写法的抄写能通过一切。</b>重合度比的是每个函数去掉空白后的行，改变量名就能绕开。记录里：没被告知、看不到源码，tqdm 三次的第一稿是 51–59%，python-dotenv 是 28%；被告知、看不到源码，9–38%（15 次调用）；
+被告知而且手里有源码的只有三次修复，各自一个文件，27–30%。没有一次是“整份第一版、开着源码写、警告后面没有拒绝”。</li>
+<li><b>简化得可能更少。</b>读着源码写的作者可能保留原版的结构。要在头几次运行里按功能看体积。</li>
+<li><b>修复少了指路的东西。</b>今天一个没过的检查会指向它的事实。没有事实之后只有功能名、错误类型、位置和对比的值。场景用例至少要留一个名字，否则一个失败的用例只是一行“期望和实际”，作者不知道是哪个调用。
+读源码帮不上这个忙：调用写在保密的测试里。</li>
+<li><b>没有事实之后，源码就是作者的主要依据。</b>35 个功能只剩 51 句行为描述。每一处精确的输出、默认值、报错信息都属于“不确定”，于是“不懂再查”实际上是大部分都查。
+这和你说的“按功能图重写，不懂再查”有距离，是第十节的第 1 件。</li>
+<li><b>两个作业带来的口子，配对之前必须先堵上：</b><ul>
+<li>借出的文件里可能有测试模块（第三节已经说了要排除）。</li>
+<li>对方的仓库副本和状态目录，今天不在各自会话看不到的路径里。不加进去，主作业的设计者能读到草稿，草稿作业的作者能读到设计出的测试。</li>
+<li>token 上限如果两个作业合着算，草稿花得多就会掐掉设计者或评审者，等于作者的结果在影响测试。必须在提交时分好。</li>
+<li>节点不可用时，冻结要么整个丢掉，要么带着缺口封存（第三节）。</li>
+<li>发起运行的那个对话看得见两个作业。主作业封存之前，它能看到草稿的结果，也能手动调主作业的工具去设计指定的节点。配对时，这类手动调用在封存之前要拒绝。</li>
+<li>草稿作业在主作业失败或取消之后继续花钱；负责人暂停了一个，忘了另一个。取消和暂停要互相传递。</li>
+</ul></li>
+<li><b>负责人看的报告会少一些句子。</b>进度页和报告今天用事实来说明“这个检查验证了什么”。没有事实之后，一个检查只有编号和功能名。
+可以让设计者给每个测试文件写一行说明，只给负责人看，不评审，也不给作者。</li>
+<li><b>借源码的范围必须一直是那份清单。</b>负责人的仓库里测试就放在源码旁边。“作者可以读原版”绝不能变成“作者可以读仓库目录”。这道过滤现在是作者和原版测试之间唯一的东西，要有它自己的测试。配对之后还要有钉住保证一的测试：封存之前的导入被拒绝；对方的路径看不到；台账里记着草稿作业的编号。</li>
+</ol><h2 id="phase">九、实施顺序</h2><p>评审把我原来的顺序改了：原来是先把五处改动都做完再量一次，现在是先量，再决定要不要做最大的那处改动。</p><div class="scroll"><table class="plan"><thead><tr><th>阶段</th><th>做什么</th><th>为什么排在这里</th></tr></thead><tbody><tr><td>0</td><td>第一档里不依赖新前提的：A1、A2、A4，D1 的三部分，E1 留下的部分，C1 留下的三处</td><td>任何情况下都有用，和阶段 1、2 互不依赖，可以同时做。A3 已经在 main 上</td></tr><tr><td>1</td><td>借源码的第三种方式（含两处排除和记录）；作者提示词和报告的措辞；提交设计出的测试时，不把它们的事实放进作者的知识包（评审估计是一行）。加上两个现成的设置。仍然是一个作业，串行</td><td>这是能跑实验的最小改动。最后那一行不加的话，“不写事实”的那次运行里作者仍会拿到设计出的测试的事实（B 里约 234 条）</td></tr><tr><td>2</td><td><b>实验，由你启动。</b>tqdm 跑两次：一次开着源码、事实照旧；一次开着源码、不写事实。和 B 比：体积、重合度、第一次对比挂了几个检查、第一版的时长、打开了多少借来的文件、花费</td><td>整份方案的数字都押在这几个没量过的量上。跑两次才能分清变化来自源码还是来自没有事实。<br>按 B 的记录扣掉不会发生的部分，在今天的代码上大约是 144 分钟、$144 和 127 分钟、$93；阶段 0 先做完的话约 121 和 105 分钟</td></tr><tr><td>3</td><td>测试设计去掉写给作者的文字；第一次完整对比之前不开 controller 回合，补上三条规则</td><td>校验方一侧最大的改动。实验说明没有事实也行，再做</td></tr><tr><td>4</td><td>两个作业：先堵上第八节第 7 条的口子、办完检查执行器的四件事、写好钉住保证一的测试；再做草稿作业的角色和终态、导入、协调、进度页</td><td>它的收益取决于第一版的时长，实验之后才知道值不值</td></tr><tr><td>5</td><td>多 scope：先在 detectron2 上用现成的按层写跑一个阶段，再决定要不要骨架调用</td><td>前提最多、证据最少的一步</td></tr></tbody></table></div><h2 id="dec">十、需要你定的事</h2><div class="dec"><h3>1. 事实还要不要</h3><p>去掉事实省 $49–52 和 16–29 分钟，草稿也才能和冻结同时写。代价是源码成了作者的主要依据，“不懂再查”变成大部分都查（第八节第 6 条）。保留原版测试的事实，作者有一份可以照着写的行为记录，源码是后备；但那一步的钱和时间照旧，而且作者这条链要先等它。</p><p><b>我的建议：</b>实验里两种各跑一次再定。我倾向不要：源码比事实短，而且准确；该担心的是重合度和体积，这两样实验都会量。</p></div><div class="dec"><h3>2. “作者看不到源码”这种模式还留不留</h3><p>留着，测试设计里就要有两条分支，C2、C1 讲文字的三处和 D1 的第 3 部分也还要做。不留，这些都可以删，但“独立重写、没看过源码”这个说法以后就没有了。</p><p><b>我的建议：</b>先留着当对照；C2、C1 讲文字的三处、D1 的第 3 部分（给探针写事实）先不做。等新模式在实验里站住了再决定删不删。这会改动你说的“第一档全做”。</p></div><div class="dec"><h3>3. 吓唬的那句话怎么写</h3><p>现在的提示词写的是“超过限制的文件会被打回重写”。按你的决定不会真的打回。可以原样保留，这就是吓唬；记录里 15 次被告知的调用听到的都是这句话，重合度 9–38%。也可以改成如实的“比对结果会报告给负责人”，效果没有记录。原样保留有一个代价：相信它的作者会花时间自己查重，A 的一次重写里有 9.9 分钟花在这上面。</p><p><b>我的建议：</b>第一次实验原样保留，量重合度和作者花在查重上的时间。同时 controller 的 guide 要改成：重合度永远不是让作者重写的理由，否则它看到 55% 可能自己安排重写。</p></div><div class="dec"><h3>4. 迁移那些用了私有名字的原版测试，还做不做</h3><p>作者现在看得见私有名字，可以把它们留下来，那样就不用迁移了。迁移涉及 23–24 个原版测试，带着它的四个节点占设计者花费的 41–53%。但不迁移就等于用测试把重写锁在原版的内部结构上。</p><p><b>我的建议：</b>继续迁移。这是拿更小的实现换更便宜的测试，不划算。</p></div><div class="dec"><h3>5. 三件不在你清单里的小事</h3><p>这次分析里冒出来、和新前提无关的：（a）设计者数量设成目标数，第一轮约省 4 分钟，是个设置。（b）试跑一结束就按节点分批评审，省几分钟，要改分批方式。（c）E1 里你保留的第一轮 controller 也去掉。另外有两样不在你的清单里，但它们是“两个作业、一边放到计算节点”这个决定带出来的，我当成必做：检查执行器的那几件事；把校验方的临时目录放到作者看不到的路径下。</p><p><b>我的建议：</b>（a）和（c）做，（b）先不做。</p></div><div class="dec"><h3>6. 配对时检查放在哪</h3><p>放节点：断掉“作者的负载影响试跑”这条路，计时也稳；代价是排队，和冻结期间占着一个分配。留在登录机：不排队，但那条路还在。</p><p><b>我的建议：</b>放节点，冻结期间保持一个分配。校验链只有几分钟的小项目（python-dotenv 那样）不配对，一个作业串行跑。</p></div><div class="dec"><h3>7. 两个作业的预算怎么分</h3><p>时间可以共用一个截止时间。token 不能合着算（第八节第 7 条）。</p><p><b>我的建议：</b>提交时按固定比例分好，各管各的；默认比例按已有记录里两边的用量定。</p></div><div class="dec"><h3>8. 多个 scope 怎么并行</h3><p>机制现成的按层写（detectron2 的第一版 413 → 228 分钟，是按 E 的会话时长排出来的，没有记录）；或者先做一次骨架调用再全部同时写（可能到 107–144 分钟，五个前提没验证，而且要付体积）。</p><p><b>我的建议：</b>先用按层写。骨架调用等 detectron2 上跑过一个阶段、看到合并冲突和体积之后再决定。</p></div><div class="dec"><h3>9. 第一次实验</h3><p>付费的真实运行由你启动。两次都跑约 $238、各两个多小时；只跑“不写事实”那一次约 $93，但分不清变化来自哪里。</p><p><b>我的建议：</b>两次都跑。阶段 1 的改动做完后我把启动方式准备好，等你说开始。</p></div><p>下面几处我按最简单的方式先定了，你可以推翻：草稿作业写完第一版就停，不自己对比和修复；草稿作业没有 controller；它自己的那次基线不做敲除；
+导入拿的是“草稿完成”时的候选；一个仓库副本只跑一个作业，所以配对用两个副本。</p><h2 id="how">十一、这份方案是怎么来的，哪些没验证</h2><ul>
+<li><b>流程图。</b>一个只读的子代理把 main 上从启动到交付的每一步读了一遍，记下每一步用谁的产出、顺序由哪段代码强制、理由属于哪一种。第一节的两张表来自它。</li>
+<li><b>三个方向的分析。</b>三个会话分头看：校验方和提交前的阶段；作者和 controller；执行、两个作业和时间线。每个都对着代码和 A、B、D、E、F 的记录。</li>
+<li><b>交叉挑错。</b>我把三份分析并成一份草案，再让三个会话各挑别人那部分的错。主要的更正有四处：合流点原来没有定义“等”；时间线用了两套不一致的假设，而且没算排队；
+“每个节点单独试跑和评审”不成立；多 scope 同时写的 279 分钟漏了前提。这一页写的是更正之后的版本。</li>
+<li><b>数字。</b>时间和花费由一个脚本从作业记录里算出，用到的假设列在第五节。发布前有一轮独立核对：它用自己的脚本从记录重算了全部时间和花费，数字都对上了；另外找出 21 处说法上的问题（一处事实写错、几处把估计写成了记录、几处前后不一致），都已改掉。</li>
+</ul>
+<p><b>没验证的：</b>没有跑任何实验，也没有改任何代码。关于计算节点的数字（排队两分钟、计时噪声）来自 11 月 16–17 日在这个集群上的观察，不是这次量的。
+detectron2 那一列是两次不同契约的记录拼起来的。第二节里“设计这一步能降到多少”是按否决原因和花费拟合出来的估计，拟合并不紧。</p><footer>2026-11-18 生成。运行数据由作业记录提取；方案经过对着代码的交叉评审；尚未实现。</footer><div id="tip" hidden></div><script>
+(function(){var t=document.getElementById('tip');
+function show(e){var s=e.currentTarget;t.textContent='';var v=document.createElement('b');v.textContent=s.dataset.v;
+var n=document.createElement('span');n.textContent=s.dataset.r+' · '+s.dataset.n;t.appendChild(v);t.appendChild(n);t.hidden=false;
+var r=s.getBoundingClientRect();var x=Math.min(document.documentElement.clientWidth-t.offsetWidth-8,Math.max(8,r.left+r.width/2-t.offsetWidth/2));
+t.style.left=(x+window.scrollX)+'px';t.style.top=(r.top+window.scrollY-t.offsetHeight-8)+'px';}
+function hide(){t.hidden=true;}
+document.querySelectorAll('.gseg').forEach(function(s){s.addEventListener('pointerenter',show);s.addEventListener('focus',show);
+s.addEventListener('pointerleave',hide);s.addEventListener('blur',hide);});})();
+</script></main></body></html>
