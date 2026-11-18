@@ -69,7 +69,7 @@ table.w td:nth-child(1){min-width:150px;font-weight:650}table.w{font-size:14px}
 table.inv td:nth-child(1){min-width:170px;font-weight:650}table.inv td:nth-child(2){min-width:210px}table.inv{font-size:13.8px}
 .kind{display:inline-block;font-size:12px;border-radius:9px;padding:0 8px;border:1px solid var(--line);white-space:nowrap}
 .kind.d{color:var(--fg)}.kind.i{color:var(--acc);border-color:var(--acc)}.kind.c{color:var(--warn);border-color:var(--warn)}
-</style></head><body><main><div class="eyebrow">nanolize · main @ 71d386d · 2026-11-18 · 方案，尚未实现</div><h1>作者可以查源码之后，nanolize 的流程能简化成什么样</h1><p class="lead">你定了三件事：作者可以查阅原版源码（仍然从空工作区开始，按功能图自己重写，不懂的地方再去查，不在原版上改）；
+</style></head><body><main><div class="eyebrow">nanolize · main @ 71d386d · 2026-11-18 · 方案，尚未实现</div><h1>作者可以查源码之后，nanolize 的流程能简化成什么样</h1><div class="dec"><b>已有第二版。</b>这一页第十节的 9 件事已经定了，按这些决定定稿的方案在<a href="../source-consultable-plan-v2/">第二版</a>。这一页保留，作为分析过程和推算细节的出处；其中关于 token 预算和“保持一个分配”的两处说法在第二版里已经改正。</div><p class="lead">你定了三件事：作者可以查阅原版源码（仍然从空工作区开始，按功能图自己重写，不懂的地方再去查，不在原版上改）；
 从第一次调用起就告诉它“代码会和原版比对”，但不真的打回重写；上一份报告的第一档全做。这份方案回答你的问题：整条流程因此能简化成什么样，
 省掉哪些步骤，哪些模块可以同时跑。依据是把 main 上的流程从头到尾读了一遍（每一步在等谁、为什么等），以及这台机器上已有的运行记录。它接着<a href="../pipeline-review-20261118/">上一份报告</a>往下写，那里的条目编号（A1、C2 等）在这里直接沿用。</p><div class="note"><b>结论</b><ol>
 <li><b>你的判断成立：流程里有一大块只因为“作者看不到源码”才存在。</b>tqdm 的三次运行里，记录上能直接数出来的部分（写事实这一整步、防默写之后的重写和它后面那一轮）
